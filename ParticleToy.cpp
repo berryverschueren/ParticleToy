@@ -3,6 +3,7 @@
 
 #include "Particle.h"
 #include "Force.h"
+#include "GravityForce.h"
 #include "SpringForce.h"
 #include "RodConstraint.h"
 #include "CircularWireConstraint.h"
@@ -16,7 +17,7 @@
 /* macros */
 
 /* external definitions (from solver) */
-extern void simulation_step( std::vector<Particle*> pVector, float dt );
+extern void simulation_step( std::vector<Particle*> pVector, std::vector<Force*> fVector, float dt );
 
 /* global variables */
 
@@ -89,6 +90,8 @@ static void init_system(void)
 	pVector.push_back(new Particle(center + offset + offset));
 	pVector.push_back(new Particle(center + offset + offset + offset));
 	
+	fVector.push_back(new GravityForce(pVector));
+
 	// You shoud replace these with a vector generalized forces and one of
 	// constraints...
 	delete_this_dummy_spring = new SpringForce(pVector[0], pVector[1], dist, 1.0, 1.0);
@@ -271,7 +274,7 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-	if ( dsim ) simulation_step( pVector, dt );
+	if ( dsim ) simulation_step( pVector, fVector, dt );
 	else        {get_from_UI();remap_GUI();}
 
 	glutSetWindow ( win_id );

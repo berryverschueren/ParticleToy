@@ -9,10 +9,13 @@ public:
 	Particle(const Vec2f & ConstructPos);
 	virtual ~Particle(void);
 
+	void reset_force();
 	void reset();
 	void draw();
 
 	Vec2f m_ConstructPos;
 	Vec2f m_Position;
 	Vec2f m_Velocity;
+	Vec2f m_Force;
+	int m_Mass;
 };

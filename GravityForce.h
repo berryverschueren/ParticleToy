@@ -5,7 +5,7 @@
 
 class GravityForce: public Force {
  public:
-  GravityForce(std::vector<Particle*> particles);
+  GravityForce(std::vector<Particle*> p);
 
   void apply() override;
   void draw() override;

@@ -1,17 +1,29 @@
 #include "Particle.h"
+#include "Force.h"
 
 #include <vector>
 
 #define DAMP 0.98f
 #define RAND (((rand()%2000)/1000.f)-1.f)
-void simulation_step( std::vector<Particle*> pVector, float dt )
+void simulation_step( std::vector<Particle*> pVector, std::vector<Force*> fVector, float dt )
 {
-	int ii, size = pVector.size();
+	int ii, pSize = pVector.size(), fSize = fVector.size();
 	
-	for(ii=0; ii<size; ii++)
+	// clear force accumulators
+	for (ii=0; ii<pSize; ii++) {
+		pVector[ii]->reset_force();
+	}
+
+	// sum forces for all particles
+	for (ii=0; ii<fSize; ii++) {
+		fVector[ii]->apply();
+	}
+
+	// gather step
+	for(ii=0; ii<pSize; ii++)
 	{
 		pVector[ii]->m_Position += dt*pVector[ii]->m_Velocity;
-		pVector[ii]->m_Velocity = DAMP*pVector[ii]->m_Velocity + Vec2f(RAND,RAND) * 0.005;
+		pVector[ii]->m_Velocity += dt*pVector[ii]->m_Force/pVector[ii]->m_Mass;
 	}
 
 }
