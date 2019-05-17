@@ -1,6 +1,6 @@
 #include "GravityForce.h"
 
-GravityForce::GravityForce(std::vector<Particle*> p) : {
+GravityForce::GravityForce(std::vector<Particle*> p) {
    this->particles = p;
 };
 
