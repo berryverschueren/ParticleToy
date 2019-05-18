@@ -8,6 +8,7 @@
 #include "RodConstraint.h"
 #include "CircularWireConstraint.h"
 #include "imageio.h"
+#include "ParticleSystem.h"
 
 #include <vector>
 #include <stdlib.h>
@@ -17,7 +18,7 @@
 /* macros */
 
 /* external definitions (from solver) */
-extern void simulation_step( std::vector<Particle*> pVector, std::vector<Force*> fVector, float dt );
+extern void simulation_step( ParticleSystem *particleSystem, float dt, int solverVersion );
 
 /* global variables */
 
@@ -26,11 +27,9 @@ static float dt, d;
 static int dsim;
 static int dump_frames;
 static int frame_number;
+static int solverVersion;
 
-// static Particle *pList;
-static std::vector<Particle*> pVector;
-// static Force *fList;
-static std::vector<Force*> fVector;
+ParticleSystem *particleSystem = new ParticleSystem();
 
 static int win_id;
 static int win_x, win_y;
@@ -53,7 +52,7 @@ free/clear/allocate simulation data
 
 static void free_data ( void )
 {
-	pVector.clear();
+	particleSystem->getParticles().clear();
 	if (delete_this_dummy_rod) {
 		delete delete_this_dummy_rod;
 		delete_this_dummy_rod = NULL;
@@ -70,15 +69,17 @@ static void free_data ( void )
 
 static void clear_data ( void )
 {
-	int ii, size = pVector.size();
+	int ii, size = particleSystem->getParticles().size();
 
 	for(ii=0; ii<size; ii++){
-		pVector[ii]->reset();
+	    particleSystem->getParticles()[ii]->reset();
 	}
 }
 
 static void init_system(void)
 {
+	solverVersion = 0;
+
 	const double dist = 0.2;
 	const Vec2f center(0.0, 0.0);
 	const Vec2f offset(dist, 0.0);
@@ -86,17 +87,21 @@ static void init_system(void)
 	// Create three particles, attach them to each other, then add a
 	// circular wire constraint to the first.
 
-	pVector.push_back(new Particle(center + offset));
-	pVector.push_back(new Particle(center + offset + offset));
-	pVector.push_back(new Particle(center + offset + offset + offset));
+	particleSystem->addParticle(new Particle(center + offset));
+	particleSystem->addParticle(new Particle(center + offset + offset));
+	particleSystem->addParticle(new Particle(center + offset + offset + offset));
 	
-	fVector.push_back(new GravityForce(pVector));
+	particleSystem->addForce(new GravityForce(particleSystem->getParticles()));
+
+	printf("\n\nparticle system variables:\n");
+	printf("pVector size: %u \n", particleSystem->getParticles().size());
+	printf("fVector size: %u \n", particleSystem->getForces().size());
 
 	// You shoud replace these with a vector generalized forces and one of
 	// constraints...
-	delete_this_dummy_spring = new SpringForce(pVector[0], pVector[1], dist, 1.0, 1.0);
-	delete_this_dummy_rod = new RodConstraint(pVector[1], pVector[2], dist);
-	delete_this_dummy_wire = new CircularWireConstraint(pVector[0], center, dist);
+	delete_this_dummy_spring = new SpringForce(particleSystem->getParticles()[0], particleSystem->getParticles()[1], dist, 1.0, 1.0);
+	delete_this_dummy_rod = new RodConstraint(particleSystem->getParticles()[1], particleSystem->getParticles()[2], dist);
+	delete_this_dummy_wire = new CircularWireConstraint(particleSystem->getParticles()[0], center, dist);
 }
 
 /*
@@ -143,11 +148,11 @@ static void post_display ( void )
 
 static void draw_particles ( void )
 {
-	int size = pVector.size();
+	int size = particleSystem->getParticles().size();
 
 	for(int ii=0; ii< size; ii++)
 	{
-		pVector[ii]->draw();
+		particleSystem->getParticles()[ii]->draw();
 	}
 }
 
@@ -206,10 +211,10 @@ static void get_from_UI ()
 
 static void remap_GUI()
 {
-	int ii, size = pVector.size();
+	int ii, size = particleSystem->getParticles().size();
 	for(ii=0; ii<size; ii++)
 	{
-		pVector[ii]->reset();
+		particleSystem->getParticles()[ii]->reset();
 		//pVector[ii]->m_Position[0] = pVector[ii]->m_ConstructPos[0];
 		//pVector[ii]->m_Position[1] = pVector[ii]->m_ConstructPos[1];
 	}
@@ -240,7 +245,18 @@ static void key_func ( unsigned char key, int x, int y )
 		free_data ();
 		exit ( 0 );
 		break;
-
+	case '0':
+		solverVersion = 0;
+		break;
+	case '1':
+		solverVersion = 1;
+		break;
+	case '2':
+		solverVersion = 2;
+		break;
+	case '3':
+		solverVersion = 3;
+		break;
 	case ' ':
 		dsim = !dsim;
 		break;
@@ -275,7 +291,7 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-	if ( dsim ) simulation_step( pVector, fVector, dt );
+	if ( dsim ) simulation_step( particleSystem, dt, solverVersion );
 	else        {get_from_UI();remap_GUI();}
 
 	glutSetWindow ( win_id );
