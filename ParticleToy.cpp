@@ -93,10 +93,6 @@ static void init_system(void)
 	
 	particleSystem->addForce(new GravityForce(particleSystem->getParticles()));
 
-	printf("\n\nparticle system variables:\n");
-	printf("pVector size: %u \n", particleSystem->getParticles().size());
-	printf("fVector size: %u \n", particleSystem->getForces().size());
-
 	// You shoud replace these with a vector generalized forces and one of
 	// constraints...
 	delete_this_dummy_spring = new SpringForce(particleSystem->getParticles()[0], particleSystem->getParticles()[1], dist, 1.0, 1.0);
@@ -261,6 +257,7 @@ static void key_func ( unsigned char key, int x, int y )
 		dsim = !dsim;
 		break;
 	}
+	printf("\n Solverversion set to: %u \n", solverVersion);
 }
 
 static void mouse_func ( int button, int state, int x, int y )
@@ -370,6 +367,7 @@ int main ( int argc, char ** argv )
 	printf ( "\t Toggle construction/simulation display with the spacebar key\n" );
 	printf ( "\t Dump frames by pressing the 'd' key\n" );
 	printf ( "\t Quit by pressing the 'q' key\n" );
+	printf ( "\t Set solver version 0,1,2,3 by pressing the matching number key\n" );
 
 	dsim = 0;
 	dump_frames = 0;
