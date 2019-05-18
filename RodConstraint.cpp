@@ -1,6 +1,7 @@
 #include "RodConstraint.h"
 #include <GL/glut.h>
 #include <cmath>
+#include <vector>
 
 RodConstraint::RodConstraint(Particle *p1, Particle *p2, double dist) :
   m_p1(p1), m_p2(p2), m_dist(dist) {}
@@ -21,7 +22,7 @@ float RodConstraint::constraint_derivative_value() {
 
 std::vector<Vec2f> RodConstraint::jacobian_value() {
   float xDiffNormal = 2 * (m_p1->m_Position[0] - m_p2->m_Position[0]);
-  float yDiffNormal = 2 * (m_p1->m_Position[1] - m_p2->m_Position[1]);  
+  float yDiffNormal = 2 * (m_p1->m_Position[1] - m_p2->m_Position[1]);
   float xDiffReverse = 2 * (m_p2->m_Position[0] - m_p1->m_Position[0]);
   float yDiffReverse = 2 * (m_p2->m_Position[1] - m_p1->m_Position[1]);
   return std::vector<Vec2f> { Vec2f(xDiffNormal, yDiffNormal), Vec2f(xDiffReverse, yDiffReverse) };
