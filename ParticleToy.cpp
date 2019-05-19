@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
+#include <iostream>
 
 /* macros */
 
@@ -91,7 +92,7 @@ static void init_system(void)
 	pVector.push_back(new Particle(center + offset + offset));
 	pVector.push_back(new Particle(center + offset + offset + offset));
 	
-	fVector.push_back(new GravityForce(pVector));
+	//fVector.push_back(new GravityForce(pVector));
 	fVector.push_back(new SpringForce(pVector[0], pVector[1], dist+dist, 0.05, 0.5));
 
 	// You shoud replace these with a vector generalized forces and one of
@@ -190,17 +191,44 @@ static void get_from_UI ()
 
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
-	if ( mouse_down[0] ) {
+	//left mouse click
+    if ( mouse_down[0] ) {
 
-	}
+    }
+    //right mouse click
+    if ( mouse_down[2] ) {
 
-	if ( mouse_down[2] ) {
-	}
+    }
 
+    //start pos
 	hi = (int)((       hmx /(float)win_x)*N);
 	hj = (int)(((win_y-hmy)/(float)win_y)*N);
 
 	if( mouse_release[0] ) {
+
+	    const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
+	    std::cout << "start=" << startPos[0] << "," << startPos[1] << '\n';
+
+	    const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+	    std::cout << "currentPos=" << currentPos[0] << "," << currentPos[1] << '\n';
+
+	    int size = pVector.size();
+        Particle* closestParticle = NULL;
+        float dist = 1000000.0;
+        for (int k = 0; k < size; ++k) {
+            Vec2f l = currentPos - pVector[k]->m_Position;
+            float normL = std::sqrt(std::abs(std::pow(l[0], 2)) + std::abs(std::pow(l[1], 2)));
+            if (normL < dist) {
+                dist = normL;
+                closestParticle = pVector[k];
+            }
+        }
+
+        Particle* p = new Particle(startPos);
+        pVector.push_back(p);
+        fVector.push_back(new SpringForce(p, closestParticle, dist*2, 0.05, 0.5));
+        mouse_release[0] = 0;
+
 	}
 
 	omx = mx;

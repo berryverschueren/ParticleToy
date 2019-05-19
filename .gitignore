@@ -35,3 +35,4 @@
 .vscode/
 include/
 .idea/workspace.xml
+*.png

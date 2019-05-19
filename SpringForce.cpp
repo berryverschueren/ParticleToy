@@ -21,7 +21,7 @@ void SpringForce::apply(){
     float normL = std::sqrt(std::abs(std::pow(l[0],2))+std::abs(std::pow(l[1],2)));
     float dot = i[0]*l[0]+i[1]*l[1];
 
-    Vec2f f1 = (m_ks*(normL-m_dist)+m_kd*(dot/normL))*(l/-normL);
+    Vec2f f1 = -(m_ks*(normL-m_dist)+m_kd*(dot/normL))*(l/normL);
     Vec2f f2 = -f1;
 
     m_p1->m_Force += f1;
