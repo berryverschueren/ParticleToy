@@ -1,4 +1,6 @@
 #include "ParticleSystem.h"
+#include <cmath>
+#include <vector>
 
 ParticleSystem::ParticleSystem() {};
 
@@ -61,13 +63,12 @@ void ParticleSystem::applyForces() {
         fVector[ii]->apply();
     }
 }
-
+// NOTE need particles, constraints and force
 void ParticleSystem::applyConstraints() {
-    int ii, size = cVector.size();
-    for (ii=0; ii<size; ii++) {
-        // TODO::
-        //cVector[ii]->apply();
-    }
+    // we got : C, Cder, J, Jder
+    // need to make : M (diagonal mass matrix 3n*3n), W (M^-1), Q (3n long force field), q (3n state vector)
+    // calculate lambda^T = (JWJ^T)^-1 (-Jder qder^T - J W Q^T)
+    // next calculate ^Q = lambda J
 }
 
 std::vector<Particle*> ParticleSystem::getParticles() {
