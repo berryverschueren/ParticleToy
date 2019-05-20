@@ -36,3 +36,7 @@
 include/
 .idea/workspace.xml
 *.png
+.idea/misc.xml
+.idea/modules.xml
+.idea/ParticleToy.iml
+.idea/vcs.xml
