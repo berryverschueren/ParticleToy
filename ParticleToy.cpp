@@ -128,24 +128,28 @@ static void createCloth() {
 	// springs to hold the cloth in place (and flip it)
 	Particle *p1 = new Particle(Vec2f(-1.0f, 1.0f));
 	Particle *p2 = new Particle(Vec2f(1.0f, 1.0f));
-	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[0], 2*distance, springConstant, dampingConstant);
-	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], 2*distance, springConstant, dampingConstant);
+	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance/4, springConstant, dampingConstant);
+	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance/4, springConstant, dampingConstant);
+	// SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[0], 2*distance, springConstant, dampingConstant);
+	// SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], 2*distance, springConstant, dampingConstant);
 	particleSystem->addParticle(p1);
 	particleSystem->addParticle(p2);
 	particleSystem->addForce(sf1);
 	particleSystem->addForce(sf2);
 
-
-	// constraint to hold cloth in place from the top
 	double radius = 0.005f;
 	const Vec2f allowedOffset(radius, 0.0);
-	float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
-	auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
-	auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
-	auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
-	auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
-	particleSystem->addConstraint(constraint1);
-	particleSystem->addConstraint(constraint2);
+	float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+	auto c1 = new CircularWireConstraint(p1, p1->m_ConstructPos + allowedOffset, circDistance);
+	auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
+	particleSystem->addConstraint(c1);
+	particleSystem->addConstraint(c2);
+
+	// for (int x = 0; x < maxRow; x++) {
+	// 	Particle *part = particleSystem->getParticles()[(maxCol*x)-1];
+	// 	auto con = new CircularWireConstraint(part, part->m_ConstructPos + allowedOffset, circDistance);
+	// 	particleSystem->addConstraint(con);
+	// }
 }
 
 static void init_system(void)

@@ -8,15 +8,13 @@ class RodConstraint: public Constraint {
  public:
   RodConstraint(Particle *p1, Particle * p2, double dist);
 
-  float constraint_value();
-  float constraint_derivative_value();
-  std::vector<Vec2f> jacobian_value();
-  std::vector<Vec2f> jacobian_derivative_value();
-  void draw();
+  float constraint_value() override ;
+  float constraint_derivative_value() override ;
+  std::vector<Vec2f> jacobian_value() override ;
+  std::vector<Vec2f> jacobian_derivative_value() override ;
+  void draw() override ;
 
- private:
-
-  Particle * const m_p1;
-  Particle * const m_p2;
-  double const m_dist;
+  Particle * m_p1;
+  Particle * m_p2;
+  double m_dist;
 };

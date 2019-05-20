@@ -1,5 +1,6 @@
 #include "Matrices.h"
 #include <iostream>
+
 Matrices::Matrices(std::vector<std::vector<float>>) {};
 
 std::vector<std::vector<float>> matrixTranspose(std::vector<std::vector<float>> matrix){
@@ -96,4 +97,12 @@ std::vector<std::vector<float>> matrixSubtraction(std::vector<std::vector<float>
         }
     }
     return result;
+}
+
+std::vector<float> vectorSubtraction(std::vector<float> vec1, std::vector<float> vec2) {
+    int ii, size = vec1.size();
+    for (ii=0; ii<size; ii++) {
+        vec1[ii] = vec1[ii] - vec2[ii];
+    }
+    return vec1;
 }
