@@ -2,7 +2,7 @@
 
 #include "Particle.h"
 
-class CircularWireConstraint {
+class CircularWireConstraint: public Constraint {
  public:
   CircularWireConstraint(Particle *p, const Vec2f & center, const double radius);
 
