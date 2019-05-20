@@ -76,6 +76,64 @@ static void clear_data ( void )
 	}
 }
 
+static void createCloth() {
+	const Vec2f startingPoint(-1.0f, 1.0f);
+	int ii, jj, maxRow = 10, maxCol = 10;
+	for (ii=0; ii<maxRow; ii++) {
+		for (jj=0; jj<maxCol; jj++) {
+			auto particle = new Particle(startingPoint + Vec2f(1.0f/maxRow*ii, 1.0f/maxCol*jj));
+			particleSystem->addParticle(particle);
+		}
+	}
+
+	auto gravity = new GravityForce(particleSystem->getParticles());
+	particleSystem->addForce(gravity);
+
+	double distance = 1.0, springConstant = 1.0, dampingConstant = 1.0;
+
+	// springforce particle with particle beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+				particleSystem->getParticles()[jj*maxRow+ii+1], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+
+	// springforce particle with particle to the right of it
+    for(ii=0; ii<maxRow; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+				particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+	
+	// springforce particle with particle to the right and beneath it
+	// springforce particle with particle to the left and beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+			auto spring1 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+				particleSystem->getParticles()[(jj+1)*maxRow+ii+1], distance, springConstant, dampingConstant);
+			auto spring2 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii+1],
+				particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring1);
+            particleSystem->addForce(spring2);
+        }
+    }
+
+	// constraint to hold cloth in place from the top
+	double radius = 0.005f;
+	const Vec2f allowedOffset(radius, 0.0);
+	float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+	auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
+	auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
+	auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
+	auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
+	particleSystem->addConstraint(constraint1);
+	particleSystem->addConstraint(constraint2);
+}
+
 static void init_system(void)
 {
 	solverVersion = 0;
@@ -87,17 +145,19 @@ static void init_system(void)
 	// Create three particles, attach them to each other, then add a
 	// circular wire constraint to the first.
 
-	particleSystem->addParticle(new Particle(center + offset));
-	particleSystem->addParticle(new Particle(center + offset + offset));
-	particleSystem->addParticle(new Particle(center + offset + offset + offset));
-	
-	particleSystem->addForce(new GravityForce(particleSystem->getParticles()));
+	createCloth();
 
-	// You shoud replace these with a vector generalized forces and one of
-	// constraints...
-	delete_this_dummy_spring = new SpringForce(particleSystem->getParticles()[0], particleSystem->getParticles()[1], dist, 1.0, 1.0);
-	delete_this_dummy_rod = new RodConstraint(particleSystem->getParticles()[1], particleSystem->getParticles()[2], dist);
-	delete_this_dummy_wire = new CircularWireConstraint(particleSystem->getParticles()[0], center, dist);
+	// particleSystem->addParticle(new Particle(center + offset));
+	// particleSystem->addParticle(new Particle(center + offset + offset));
+	// particleSystem->addParticle(new Particle(center + offset + offset + offset));
+	
+	// particleSystem->addForce(new GravityForce(particleSystem->getParticles()));
+
+	// // You shoud replace these with a vector generalized forces and one of
+	// // constraints...
+	// delete_this_dummy_spring = new SpringForce(particleSystem->getParticles()[0], particleSystem->getParticles()[1], dist, 1.0, 1.0);
+	// delete_this_dummy_rod = new RodConstraint(particleSystem->getParticles()[1], particleSystem->getParticles()[2], dist);
+	// delete_this_dummy_wire = new CircularWireConstraint(particleSystem->getParticles()[0], center, dist);
 }
 
 /*
