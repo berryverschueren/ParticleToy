@@ -34,3 +34,7 @@
 # Additional folder ignores
 .vscode/
 include/
+.idea/misc.xml
+*.png
+*.xml
+.idea/ParticleToy.iml
