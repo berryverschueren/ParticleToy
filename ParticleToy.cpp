@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
+#include <iostream>
 
 /* macros */
 
@@ -40,7 +41,7 @@ static int mouse_shiftclick[3];
 static int omx, omy, mx, my;
 static int hmx, hmy;
 
-static SpringForce * delete_this_dummy_spring = NULL;
+//static SpringForce * delete_this_dummy_spring = NULL;
 static RodConstraint * delete_this_dummy_rod = NULL;
 static CircularWireConstraint * delete_this_dummy_wire = NULL;
 
@@ -58,10 +59,11 @@ static void free_data ( void )
 		delete delete_this_dummy_rod;
 		delete_this_dummy_rod = NULL;
 	}
-	if (delete_this_dummy_spring) {
-		delete delete_this_dummy_spring;
-		delete_this_dummy_spring = NULL;
-	}
+	fVector.clear();
+	//if (delete_this_dummy_spring) {
+	//	delete delete_this_dummy_spring;
+	//	delete_this_dummy_spring = NULL;
+	//}
 	if (delete_this_dummy_wire) {
 		delete delete_this_dummy_wire;
 		delete_this_dummy_wire = NULL;
@@ -90,11 +92,11 @@ static void init_system(void)
 	pVector.push_back(new Particle(center + offset + offset));
 	pVector.push_back(new Particle(center + offset + offset + offset));
 	
-	fVector.push_back(new GravityForce(pVector));
+	//fVector.push_back(new GravityForce(pVector));
+	fVector.push_back(new SpringForce(pVector[0], pVector[1], dist+dist, 0.05, 0.5));
 
 	// You shoud replace these with a vector generalized forces and one of
 	// constraints...
-	delete_this_dummy_spring = new SpringForce(pVector[0], pVector[1], dist, 1.0, 1.0);
 	delete_this_dummy_rod = new RodConstraint(pVector[1], pVector[2], dist);
 	delete_this_dummy_wire = new CircularWireConstraint(pVector[0], center, dist);
 }
@@ -153,9 +155,11 @@ static void draw_particles ( void )
 
 static void draw_forces ( void )
 {
-	// change this to iteration over full set
-	if (delete_this_dummy_spring)
-		delete_this_dummy_spring->draw();
+    int ii, size = fVector.size();
+
+    for (ii = 0; ii < size; ii++){
+        fVector[ii]->draw();
+    }
 }
 
 static void draw_constraints ( void )
@@ -173,6 +177,24 @@ relates mouse movements to particle toy construction
 ----------------------------------------------------------------------
 */
 
+static Particle* closestParticle(Vec2f pos){
+    int size = pVector.size();
+    Particle* closestParticle = NULL;
+    float dist = 1000000.0;
+    for (int k = 0; k < size; ++k) {
+        Vec2f l = pos - pVector[k]->m_Position;
+        float normL = std::sqrt(std::abs(std::pow(l[0], 2)) + std::abs(std::pow(l[1], 2)));
+        if (normL < dist) {
+            dist = normL;
+            closestParticle = pVector[k];
+        }
+    }
+    if(dist > 1){
+        closestParticle = new Particle(pos);
+    }
+    return closestParticle;
+}
+
 static void get_from_UI ()
 {
 	int i, j;
@@ -187,17 +209,63 @@ static void get_from_UI ()
 
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
-	if ( mouse_down[0] ) {
+	//left mouse click
+    if ( mouse_down[0] ) {
 
-	}
+    }
+    //right mouse click
+    if ( mouse_down[2] ) {
 
-	if ( mouse_down[2] ) {
-	}
+    }
 
+    //start pos
 	hi = (int)((       hmx /(float)win_x)*N);
 	hj = (int)(((win_y-hmy)/(float)win_y)*N);
 
 	if( mouse_release[0] ) {
+
+	    const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
+	    std::cout << "start=" << startPos[0] << "," << startPos[1] << '\n';
+
+	    const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+	    std::cout << "currentPos=" << currentPos[0] << "," << currentPos[1] << '\n';
+
+	    //Particle* startClosestParticle = closestParticle(startPos);
+        //Particle* currentClosestParticle = closestParticle(currentPos);
+
+        int size = pVector.size();
+        Particle*   startClosestParticle = NULL;
+        Particle* currentClosestParticle = NULL;
+        float sDist = 1000000.0;
+        float cDist = 1000000.0;
+        for (int k = 0; k < size; ++k) {
+            Vec2f sV = startPos - pVector[k]->m_Position;
+            Vec2f cV = currentPos - pVector[k]->m_Position;
+
+            float sL = std::sqrt(std::abs(std::pow(sV[0], 2)) + std::abs(std::pow(sV[1], 2)));
+            float cL = std::sqrt(std::abs(std::pow(cV[0], 2)) + std::abs(std::pow(cV[1], 2)));
+            if (sL < sDist) {
+                sDist = sL;
+                startClosestParticle = pVector[k];
+            }
+            if (cL < cDist) {
+                cDist = cL;
+                currentClosestParticle = pVector[k];
+            }
+        }
+        if(sDist > 0.1){
+            startClosestParticle = new Particle(startPos);
+            pVector.push_back(startClosestParticle);
+        }
+        if(cDist > 0.1){
+            currentClosestParticle = new Particle(currentPos);
+            pVector.push_back(currentClosestParticle);
+        }
+
+        //Particle* p = new Particle(startPos);
+        fVector.push_back(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
+        mouse_release[0] = 0;
+
 	}
 
 	omx = mx;
@@ -209,8 +277,9 @@ static void remap_GUI()
 	int ii, size = pVector.size();
 	for(ii=0; ii<size; ii++)
 	{
-		pVector[ii]->m_Position[0] = pVector[ii]->m_ConstructPos[0];
-		pVector[ii]->m_Position[1] = pVector[ii]->m_ConstructPos[1];
+	    pVector[ii]->reset();
+		//pVector[ii]->m_Position[0] = pVector[ii]->m_ConstructPos[0];
+		//pVector[ii]->m_Position[1] = pVector[ii]->m_ConstructPos[1];
 	}
 }
 
