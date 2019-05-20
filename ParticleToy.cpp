@@ -8,6 +8,7 @@
 #include "RodConstraint.h"
 #include "CircularWireConstraint.h"
 #include "imageio.h"
+#include "ParticleSystem.h"
 
 #include <vector>
 #include <stdlib.h>
@@ -18,7 +19,7 @@
 /* macros */
 
 /* external definitions (from solver) */
-extern void simulation_step( std::vector<Particle*> pVector, std::vector<Force*> fVector, float dt );
+extern void simulation_step( ParticleSystem *particleSystem, float dt, int solverVersion );
 
 /* global variables */
 
@@ -27,11 +28,9 @@ static float dt, d;
 static int dsim;
 static int dump_frames;
 static int frame_number;
+static int solverVersion;
 
-// static Particle *pList;
-static std::vector<Particle*> pVector;
-// static Force *fList;
-static std::vector<Force*> fVector;
+ParticleSystem *particleSystem = new ParticleSystem();
 
 static int win_id;
 static int win_x, win_y;
@@ -54,7 +53,7 @@ free/clear/allocate simulation data
 
 static void free_data ( void )
 {
-	pVector.clear();
+	particleSystem->getParticles().clear();
 	if (delete_this_dummy_rod) {
 		delete delete_this_dummy_rod;
 		delete_this_dummy_rod = NULL;
@@ -72,15 +71,75 @@ static void free_data ( void )
 
 static void clear_data ( void )
 {
-	int ii, size = pVector.size();
+	int ii, size = particleSystem->getParticles().size();
 
 	for(ii=0; ii<size; ii++){
-		pVector[ii]->reset();
+	    particleSystem->getParticles()[ii]->reset();
 	}
+}
+
+static void createCloth() {
+	const Vec2f startingPoint(-1.0f, 1.0f);
+	int ii, jj, maxRow = 10, maxCol = 10;
+	for (ii=0; ii<maxRow; ii++) {
+		for (jj=0; jj<maxCol; jj++) {
+			auto particle = new Particle(startingPoint + Vec2f(1.0f/maxRow*ii, 1.0f/maxCol*jj));
+			particleSystem->addParticle(particle);
+		}
+	}
+
+	auto gravity = new GravityForce(particleSystem->getParticles());
+	particleSystem->addForce(gravity);
+
+	double distance = 1.0, springConstant = 1.0, dampingConstant = 1.0;
+
+	// springforce particle with particle beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+				particleSystem->getParticles()[jj*maxRow+ii+1], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+
+	// springforce particle with particle to the right of it
+    for(ii=0; ii<maxRow; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+				particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+	
+	// springforce particle with particle to the right and beneath it
+	// springforce particle with particle to the left and beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+			auto spring1 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+				particleSystem->getParticles()[(jj+1)*maxRow+ii+1], distance, springConstant, dampingConstant);
+			auto spring2 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii+1],
+				particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring1);
+            particleSystem->addForce(spring2);
+        }
+    }
+
+	// constraint to hold cloth in place from the top
+	double radius = 0.005f;
+	const Vec2f allowedOffset(radius, 0.0);
+	float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+	auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
+	auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
+	auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
+	auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
+	particleSystem->addConstraint(constraint1);
+	particleSystem->addConstraint(constraint2);
 }
 
 static void init_system(void)
 {
+	solverVersion = 0;
+
 	const double dist = 0.2;
 	const Vec2f center(0.0, 0.0);
 	const Vec2f offset(dist, 0.0);
@@ -88,9 +147,11 @@ static void init_system(void)
 	// Create three particles, attach them to each other, then add a
 	// circular wire constraint to the first.
 
-	pVector.push_back(new Particle(center + offset));
-	pVector.push_back(new Particle(center + offset + offset));
-	pVector.push_back(new Particle(center + offset + offset + offset));
+	//createCloth();
+
+	// particleSystem->addParticle(new Particle(center + offset));
+	// particleSystem->addParticle(new Particle(center + offset + offset));
+	// particleSystem->addParticle(new Particle(center + offset + offset + offset));
 	
 	//fVector.push_back(new GravityForce(pVector));
 	fVector.push_back(new SpringForce(pVector[0], pVector[1], dist+dist, 0.05, 0.5));
@@ -145,11 +206,11 @@ static void post_display ( void )
 
 static void draw_particles ( void )
 {
-	int size = pVector.size();
+	int size = particleSystem->getParticles().size();
 
 	for(int ii=0; ii< size; ii++)
 	{
-		pVector[ii]->draw();
+		particleSystem->getParticles()[ii]->draw();
 	}
 }
 
@@ -274,10 +335,10 @@ static void get_from_UI ()
 
 static void remap_GUI()
 {
-	int ii, size = pVector.size();
+	int ii, size = particleSystem->getParticles().size();
 	for(ii=0; ii<size; ii++)
 	{
-	    pVector[ii]->reset();
+		particleSystem->getParticles()[ii]->reset();
 		//pVector[ii]->m_Position[0] = pVector[ii]->m_ConstructPos[0];
 		//pVector[ii]->m_Position[1] = pVector[ii]->m_ConstructPos[1];
 	}
@@ -308,11 +369,23 @@ static void key_func ( unsigned char key, int x, int y )
 		free_data ();
 		exit ( 0 );
 		break;
-
+	case '0':
+		solverVersion = 0;
+		break;
+	case '1':
+		solverVersion = 1;
+		break;
+	case '2':
+		solverVersion = 2;
+		break;
+	case '3':
+		solverVersion = 3;
+		break;
 	case ' ':
 		dsim = !dsim;
 		break;
 	}
+	printf("\n Solverversion set to: %u \n", solverVersion);
 }
 
 static void mouse_func ( int button, int state, int x, int y )
@@ -343,7 +416,7 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-	if ( dsim ) simulation_step( pVector, fVector, dt );
+	if ( dsim ) simulation_step( particleSystem, dt, solverVersion );
 	else        {get_from_UI();remap_GUI();}
 
 	glutSetWindow ( win_id );
@@ -422,6 +495,7 @@ int main ( int argc, char ** argv )
 	printf ( "\t Toggle construction/simulation display with the spacebar key\n" );
 	printf ( "\t Dump frames by pressing the 'd' key\n" );
 	printf ( "\t Quit by pressing the 'q' key\n" );
+	printf ( "\t Set solver version 0,1,2,3 by pressing the matching number key\n" );
 
 	dsim = 0;
 	dump_frames = 0;
