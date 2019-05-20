@@ -3,6 +3,8 @@
 #include <vector>
 #include "Matrices.h"
 #include "linearSolver.h"
+#include <typeinfo>
+#include "CircularWireConstraint.h"
 
 ParticleSystem::ParticleSystem() {};
 
@@ -80,10 +82,10 @@ void ParticleSystem::applyConstraints() {
     std::vector<Force*> q = fVector;
 
     // Define sizes
-    int noParticles = pVector.size();
+    int noParticles = p.size();
     int dim = 2;
     int sizePart = noParticles * dim;
-    int noConstraints = cVector.size();
+    int noConstraints = c.size();
 
     // define M, W, Q and qder ++ C, Cder, J, Jd and  J^T
     std::vector<std::vector<float>> M(sizePart, std::vector<float>(sizePart));
@@ -105,46 +107,51 @@ void ParticleSystem::applyConstraints() {
 
     // compute mass along main diagonal for the particles
     for (int ii = 0; ii<noParticles; ii++) {
-        Particle *p = pVector[ii];
         for (int d = 0; d < dim; d++) {
-            M[dim * ii + d][dim*ii + d] = p->m_Mass; // only mass of the particles along the diagonal
-            W[dim * ii + d][dim*ii + d] = 1 / p->mass; // inverse diagonal matrix is 1/..
-            }
+            M[dim * ii + d][dim*ii + d] = p[ii]->m_Mass; // only mass of the particles along the diagonal
+            W[dim * ii + d][dim*ii + d] = 1.0f / p[ii]->m_Mass; // inverse diagonal matrix is 1/..
+        }
     }
 
     // compute Q and qd for the particles
     for (int i =0; i<noParticles; i++) {
-        Particle *p = pVector[i];
         for (int d = 0; d<dim; d++) {
-            Q[dim*i + d] = p->m_Force[d]; // list of all forces
-            qd[dim*i + d] = p->m_Velocity[d]; // derivative q is velocity
+            Q[dim*i + d] = p[i]->m_Force[d]; // list of all forces
+            qd[dim*i + d] = p[i]->m_Velocity[d]; // derivative q is velocity
         }
     }
 
-    for (int ii=0; ii<noConstraints; ii++) {
-        Constraint* c = cVector[ii];
-        C[ii] = c->constraint_value();
-        Cd[ii] = c->constraint_derivative_value();
-        std::vector<Vec2f> jtemp = c->jacobian_value();
-        std::vector<Vec2f> jdtemp = c->jacobian_derivative_value();
-        std::vector<Particle *> currentParticles = c->cVector; //TODO true? WHich particles?
-
-        for (int j = 0; j < currentParticles.size(); j++)
-        {
-            int position = getPosition(currentParticles[j]);
-            if (position != -1)
-            {
-                int index = position * dim;
-                for (int d = 0; d < dim; d++)
-                {
-                    Jd[ii][index + d] = jdtemp[j][d];
-                    J[ii][index + d] = jtemp[j][d];
-                    JTranspose[index + d][ii] = jtemp[j][d];
-                }
+    for (int ii = 0; ii < noConstraints; ii++) {
+        C[ii] = c[ii]->constraint_value();
+        Cd[ii] = c[ii]->constraint_derivative_value();
+        std::vector<Vec2f> jtemp = c[ii]->jacobian_value();
+        std::vector<Vec2f> jdtemp = c[ii]->jacobian_derivative_value();
+        CircularWireConstraint cwc;
+        if (typeid(c) == typeid(cwc)) {
+            Particle currentParticle = c[ii]->m_p;
+            int position = getPosition(currentParticle);
+            int index = position * dim;
+            for (int d = 0; d < dim; d++) {
+                Jd[ii][index + d] = jdtemp[0][d];
+                J[ii][index + d] = jtemp[0][d];
+                JTranspose[index + d][ii] = jtemp[0][d];
             }
-            else
-            {
-                std::cout << "Error position -1";
+        } else {
+            Particle currentParticle1 = c[ii]->m_p1;
+            int position = getPosition(currentParticle1);
+            int index = position * dim;
+            for (int d = 0; d < dim; d++) {
+                Jd[ii][index + d] = jdtemp[0][d];
+                J[ii][index + d] = jtemp[0][d];
+                JTranspose[index + d][ii] = jtemp[0][d];
+            }
+            Particle currentParticle2 = c[ii]->m_p2;
+            position = getPosition(currentParticle2);
+            index = position * dim;
+            for (int d = 0; d < dim; d++) {
+                Jd[ii][index + d] = jdtemp[1][d];
+                J[ii][index + d] = jtemp[1][d];
+                JTranspose[index + d][ii] = jtemp[1][d];
             }
         }
     }
@@ -154,22 +161,20 @@ void ParticleSystem::applyConstraints() {
     double kd =0.5;
     std::vector<std::vector<float>> JW = Matrices::matrixMultiplication(J, W);
     std::vector<std::vector<float>> JWJTranspose = Matrices::matrixMultiplication(JW ,JTranspose);
-    std::vector<float>  Jdqd =  Matrices::matrixMultiplicationScalar(matrixMultiplication(Jd, qd), -1);
-    std::vector<float> JWQ = Matrices::matrixMultiplicationScalar(matrixMultiplication(JW, Q), -1);
+    std::vector<float> Jdqd =  Matrices::vectorMultiplicationScalar(matrixMultiplicationVector(Jd, qd), -1.0f);
+    std::vector<float> JWQ = Matrices::vectorMultiplicationScalar(matrixMultiplicationVector(JW, Q), -1.0f);
     std::vector<float> ksC = Matrices::matrixMultiplicationScalar(C, ks);
     std::vector<float> kdCd = Matrices::matrixMultiplicationScalar(Cd, kd);
+    std::vectro<float> JdqdMINUSJWQ = Matrices::matrixSubtraction(Jdqd,JWQ);
+    std::vectro<float> kscMINUSkdCd = Matrices::matrixSubtraction(ksC,kdCd);
 
-    std::vector<std::vector<float>> right = Jdqd - JWQ - ksC - kdCd;
+    std::vectro<float> right = Matrices::matrixSubtraction(JdqdMINUSJWQ,kscMINUSkdCd);
 
-    //TODO
-    double ConjGrad(int n, implicitMatrix *A, double x[], double b[],
-                    double epsilon,	// how low should we go?
-                    int    *steps);
+    // should work with eigen library
+    //ConjugateGradient<std::vector<std::vector<float>>, Lower|Upper> conjugategradient;
+    //auto lambda = conjugategradient.compute(JWJTranspose).solve(right);
 
-    ConjugateGradient<std::vector<std::vector<float>>, Lower|Upper> conjugategradient;
-    auto lambda = conjugategradient.compute(JWJTranspose).solve(right);
-
-    std::vector<float> Qhat = Matrices::matrixMultiplicationScalar(JTranspose, lambda);
+    //std::vector<float> Qhat = Matrices::matrixMultiplicationScalar(JTranspose, lambda);
 
     for (int i = 0; i < noParticles; i++) {
         Particle *p = pVector[i];
