@@ -58,7 +58,8 @@ static void free_data ( void )
 		delete delete_this_dummy_rod;
 		delete_this_dummy_rod = NULL;
 	}
-	fVector.clear();
+	particleSystem->getForces().clear();
+	//fVector.clear();
 	//if (delete_this_dummy_spring) {
 	//	delete delete_this_dummy_spring;
 	//	delete_this_dummy_spring = NULL;
@@ -79,7 +80,7 @@ static void clear_data ( void )
 }
 
 static void createCloth() {
-	const Vec2f startingPoint(-1.0f, 1.0f);
+	const Vec2f startingPoint(-0.5f, -0.5f);
 	int ii, jj, maxRow = 10, maxCol = 10;
 	for (ii=0; ii<maxRow; ii++) {
 		for (jj=0; jj<maxCol; jj++) {
@@ -91,7 +92,7 @@ static void createCloth() {
 	auto gravity = new GravityForce(particleSystem->getParticles());
 	particleSystem->addForce(gravity);
 
-	double distance = 1.0, springConstant = 1.0, dampingConstant = 1.0;
+	double distance = 0.15, springConstant = 0.05, dampingConstant = 0.5;
 
 	// springforce particle with particle beneath it
     for(ii=0; ii<maxRow-1; ii++){
@@ -124,16 +125,27 @@ static void createCloth() {
         }
     }
 
+	// springs to hold the cloth in place (and flip it)
+	Particle *p1 = new Particle(Vec2f(-1.0f, 1.0f));
+	Particle *p2 = new Particle(Vec2f(1.0f, 1.0f));
+	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[0], 2*distance, springConstant, dampingConstant);
+	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], 2*distance, springConstant, dampingConstant);
+	particleSystem->addParticle(p1);
+	particleSystem->addParticle(p2);
+	particleSystem->addForce(sf1);
+	particleSystem->addForce(sf2);
+
+
 	// constraint to hold cloth in place from the top
-	double radius = 0.005f;
-	const Vec2f allowedOffset(radius, 0.0);
-	float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
-	auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
-	auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
-	auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
-	auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
-	particleSystem->addConstraint(constraint1);
-	particleSystem->addConstraint(constraint2);
+	// double radius = 0.005f;
+	// const Vec2f allowedOffset(radius, 0.0);
+	// float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+	// auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
+	// auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
+	// auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
+	// auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
+	// particleSystem->addConstraint(constraint1);
+	// particleSystem->addConstraint(constraint2);
 }
 
 static void init_system(void)
@@ -147,19 +159,19 @@ static void init_system(void)
 	// Create three particles, attach them to each other, then add a
 	// circular wire constraint to the first.
 
-	//createCloth();
+	createCloth();
 
-	// particleSystem->addParticle(new Particle(center + offset));
-	// particleSystem->addParticle(new Particle(center + offset + offset));
-	// particleSystem->addParticle(new Particle(center + offset + offset + offset));
+	//particleSystem->addParticle(new Particle(center + offset));
+	//particleSystem->addParticle(new Particle(center + offset + offset));
+	//particleSystem->addParticle(new Particle(center + offset + offset + offset));
 	
 	//fVector.push_back(new GravityForce(pVector));
-	fVector.push_back(new SpringForce(pVector[0], pVector[1], dist+dist, 0.05, 0.5));
+	//particleSystem->addForce(new SpringForce(particleSystem->getParticles()[0], particleSystem->getParticles()[1], dist+dist, 0.05, 0.5));
 
 	// You shoud replace these with a vector generalized forces and one of
 	// constraints...
-	delete_this_dummy_rod = new RodConstraint(pVector[1], pVector[2], dist);
-	delete_this_dummy_wire = new CircularWireConstraint(pVector[0], center, dist);
+	//delete_this_dummy_rod = new RodConstraint(particleSystem->getParticles()[1], particleSystem->getParticles()[2], dist);
+	//delete_this_dummy_wire = new CircularWireConstraint(particleSystem->getParticles()[0], center, dist);
 }
 
 /*
@@ -216,10 +228,10 @@ static void draw_particles ( void )
 
 static void draw_forces ( void )
 {
-    int ii, size = fVector.size();
+    int ii, size = particleSystem->getForces().size();
 
     for (ii = 0; ii < size; ii++){
-        fVector[ii]->draw();
+        particleSystem->getForces()[ii]->draw();
     }
 }
 
@@ -239,15 +251,15 @@ relates mouse movements to particle toy construction
 */
 
 static Particle* closestParticle(Vec2f pos){
-    int size = pVector.size();
+    int size = particleSystem->getParticles().size();
     Particle* closestParticle = NULL;
     float dist = 1000000.0;
     for (int k = 0; k < size; ++k) {
-        Vec2f l = pos - pVector[k]->m_Position;
+        Vec2f l = pos - particleSystem->getParticles()[k]->m_Position;
         float normL = std::sqrt(std::abs(std::pow(l[0], 2)) + std::abs(std::pow(l[1], 2)));
         if (normL < dist) {
             dist = normL;
-            closestParticle = pVector[k];
+            closestParticle = particleSystem->getParticles()[k];
         }
     }
     if(dist > 1){
@@ -294,37 +306,37 @@ static void get_from_UI ()
 	    //Particle* startClosestParticle = closestParticle(startPos);
         //Particle* currentClosestParticle = closestParticle(currentPos);
 
-        int size = pVector.size();
+        int size = particleSystem->getParticles().size();
         Particle*   startClosestParticle = NULL;
         Particle* currentClosestParticle = NULL;
         float sDist = 1000000.0;
         float cDist = 1000000.0;
         for (int k = 0; k < size; ++k) {
-            Vec2f sV = startPos - pVector[k]->m_Position;
-            Vec2f cV = currentPos - pVector[k]->m_Position;
+            Vec2f sV = startPos - particleSystem->getParticles()[k]->m_Position;
+            Vec2f cV = currentPos - particleSystem->getParticles()[k]->m_Position;
 
             float sL = std::sqrt(std::abs(std::pow(sV[0], 2)) + std::abs(std::pow(sV[1], 2)));
             float cL = std::sqrt(std::abs(std::pow(cV[0], 2)) + std::abs(std::pow(cV[1], 2)));
             if (sL < sDist) {
                 sDist = sL;
-                startClosestParticle = pVector[k];
+                startClosestParticle = particleSystem->getParticles()[k];
             }
             if (cL < cDist) {
                 cDist = cL;
-                currentClosestParticle = pVector[k];
+                currentClosestParticle = particleSystem->getParticles()[k];
             }
         }
         if(sDist > 0.1){
             startClosestParticle = new Particle(startPos);
-            pVector.push_back(startClosestParticle);
+            particleSystem->addParticle(startClosestParticle);
         }
         if(cDist > 0.1){
             currentClosestParticle = new Particle(currentPos);
-            pVector.push_back(currentClosestParticle);
+            particleSystem->addParticle(currentClosestParticle);
         }
 
         //Particle* p = new Particle(startPos);
-        fVector.push_back(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
+        particleSystem->addForce(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
         mouse_release[0] = 0;
 
 	}
