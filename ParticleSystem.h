@@ -5,6 +5,11 @@
 #include "Constraint.h"
 #include "linearSolver.h"
 
+
+#include "include/Eigen/Dense"
+#include "include/Eigen/IterativeLinearSolvers"
+using namespace Eigen;
+
 class ParticleSystem {
     public: 
     ParticleSystem();
@@ -30,4 +35,5 @@ class ParticleSystem {
     void removeLastForce();
     void addConstraint(Constraint *c);
     void deleteAll();
+    int getPosition(Particle *p);
 };

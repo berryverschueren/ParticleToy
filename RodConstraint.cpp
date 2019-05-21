@@ -3,8 +3,11 @@
 #include <cmath>
 #include <vector>
 
-RodConstraint::RodConstraint(Particle *p1, Particle *p2, double dist) :
-  m_p1(p1), m_p2(p2), m_dist(dist) {}
+RodConstraint::RodConstraint(Particle *p1, Particle *p2, double dist) {
+  this->m_p1 = p1;
+  this->m_p2 = p2;
+  this->m_dist = dist;
+}
 
 float RodConstraint::constraint_value() {
   float xDiff = pow(m_p1->m_Position[0] - m_p2->m_Position[0], 2);

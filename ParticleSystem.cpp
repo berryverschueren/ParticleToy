@@ -3,15 +3,27 @@
 #include <vector>
 #include "Matrices.h"
 #include "linearSolver.h"
+#include <typeinfo>
+#include "CircularWireConstraint.h"
+#include "RodConstraint.h"
+#include <algorithm>
 
 ParticleSystem::ParticleSystem() {};
 
 int ParticleSystem::getDim() {
     return pVector.size() * 4;
 }
-int getPosition(Particle *p) {
-    int position = std::find(pVector.begin(), pVector.end(), p) - pVector.begin();
+
+int ParticleSystem::getPosition(Particle *p) {
+	int pos = std::find(pVector.begin(), pVector.end(), p) - pVector.begin();
+	if (pos < pVector.size())
+	{
+
+		return pos;
+	}
+	return -1;
 }
+
 std::vector<float> ParticleSystem::getState() {
     std::vector<float> state;
     state.resize(this->getDim());
@@ -67,117 +79,110 @@ void ParticleSystem::applyForces() {
         fVector[ii]->apply();
     }
 }
+
 void ParticleSystem::applyConstraints() {
-    // we got : C, Cder, J, Jder
-    // need to make : M (diagonal mass matrix 3n*3n), W (M^-1), Q (3n long force field), q (3n state vector)
-    // calculate J W JT lambda  = -Jd qd - J W Q - ks C - kd Cd
-    // use conj gradient to calculate lambda
-    // next calculate ^Q = lambda J
+    const int dimensions = 2;
+	int vectorSize = pVector.size() * dimensions;
+	int constraintsSize = cVector.size();
+    
+	float ks = 0.005f;
+	float kd = 0.05f;
+    // double ks = 0.05;
+    // double kd = 0.5;
 
-    // Define forces/particles/constraints
-    std::vector<Particle*> p = pVector;
-    std::vector<Constraint*> c = cVector;
-    std::vector<Force*> q = fVector;
+	VectorXf q = VectorXf::Zero(vectorSize);
+	VectorXf Q = VectorXf::Zero(vectorSize);
+	MatrixXf W = MatrixXf::Zero(vectorSize, vectorSize);
+	VectorXf C = VectorXf::Zero(constraintsSize);
+	VectorXf Cder = VectorXf::Zero(constraintsSize);
+	MatrixXf J = MatrixXf::Zero(constraintsSize, vectorSize);
+	MatrixXf Jt = MatrixXf::Zero(vectorSize, constraintsSize);
+	MatrixXf Jder = MatrixXf::Zero(constraintsSize, vectorSize);
+  
+	for (int i = 0; i < pVector.size(); i ++)
+	{
+		Particle *p = pVector[i];
+		for (int d = 0; d < dimensions; d++)
+		{
+			W(dimensions * i + d,dimensions*i + d) = 1 / p->m_Mass;
+			Q[dimensions*i + d] = p->m_Force[d];
+			q[dimensions*i + d] = p->m_Velocity[d];
+		}
+	}
 
-    // Define sizes
-    int noParticles = pVector.size();
-    int dim = 2;
-    int sizePart = noParticles * dim;
-    int noConstraints = cVector.size();
+	for (int i = 0; i < constraintsSize; i++)
+	{
+		Constraint *c = cVector[i];
 
-    // define M, W, Q and qder ++ C, Cder, J, Jd and  J^T
-    std::vector<std::vector<float>> M(sizePart, std::vector<float>(sizePart));
-    std::vector<std::vector<float>> W(sizePart, std::vector<float>(sizePart));
+        std::vector<Vec2f> j;
+        std::vector<Vec2f> jd;
 
-    std::vector<float> Q;
-    Q.resize(sizePart);
-    std::vector<float> qd;
-    qd.resize(sizePart);
-
-    std::vector<float> C;
-    C.resize(noConstraints);
-    std::vector<float> Cd;
-    Cd.resize(noConstraints);
-    std::vector<std::vector<float>> J(noConstraints, std::vector<float>(sizePart));
-    std::vector<std::vector<float>> Jd(noConstraints, std::vector<float>(sizePart));
-    std::vector<std::vector<float>> JTranspose(sizePart, std::vector<float>(noConstraints));
+        std::vector<Particle *> currentParticles;
 
 
-    // compute mass along main diagonal for the particles
-    for (int ii = 0; ii<noParticles; ii++) {
-        Particle *p = pVector[ii];
-        for (int d = 0; d < dim; d++) {
-            M[dim * ii + d][dim*ii + d] = p->m_Mass; // only mass of the particles along the diagonal
-            W[dim * ii + d][dim*ii + d] = 1 / p->mass; // inverse diagonal matrix is 1/..
-            }
-    }
-
-    // compute Q and qd for the particles
-    for (int i =0; i<noParticles; i++) {
-        Particle *p = pVector[i];
-        for (int d = 0; d<dim; d++) {
-            Q[dim*i + d] = p->m_Force[d]; // list of all forces
-            qd[dim*i + d] = p->m_Velocity[d]; // derivative q is velocity
+        if(CircularWireConstraint* con = dynamic_cast<CircularWireConstraint*>(c)) {
+            C[i] = con->constraint_value();
+		    Cder[i] = con->constraint_derivative_value();
+		    j = con->jacobian_value();
+    		jd = con->jacobian_derivative_value();
+            currentParticles.push_back(con->m_p);
+        } else if (RodConstraint* con = dynamic_cast<RodConstraint*>(c)) {
+            C[i] = con->constraint_value();
+		    Cder[i] = con->constraint_derivative_value();
+		    j = con->jacobian_value();
+    		jd = con->jacobian_derivative_value();
+            currentParticles.push_back(con->m_p1);
+            currentParticles.push_back(con->m_p2);
         }
-    }
-
-    for (int ii=0; ii<noConstraints; ii++) {
-        Constraint* c = cVector[ii];
-        C[ii] = c->constraint_value();
-        Cd[ii] = c->constraint_derivative_value();
-        std::vector<Vec2f> jtemp = c->jacobian_value();
-        std::vector<Vec2f> jdtemp = c->jacobian_derivative_value();
-        std::vector<Particle *> currentParticles = c->cVector; //TODO true? WHich particles?
-
-        for (int j = 0; j < currentParticles.size(); j++)
+        else
         {
-            int position = getPosition(currentParticles[j]);
-            if (position != -1)
-            {
-                int index = position * dim;
-                for (int d = 0; d < dim; d++)
-                {
-                    Jd[ii][index + d] = jdtemp[j][d];
-                    J[ii][index + d] = jtemp[j][d];
-                    JTranspose[index + d][ii] = jtemp[j][d];
-                }
-            }
-            else
-            {
-                std::cout << "Error position -1";
-            }
+            std::cout << "Couldnt cast constraint";
         }
-    }
 
-    // J W JT lambda  = -Jd qd - J W Q - ks C - kd Cd
-    double ks = 0.05;
-    double kd =0.5;
-    std::vector<std::vector<float>> JW = Matrices::matrixMultiplication(J, W);
-    std::vector<std::vector<float>> JWJTranspose = Matrices::matrixMultiplication(JW ,JTranspose);
-    std::vector<float>  Jdqd =  Matrices::matrixMultiplicationScalar(matrixMultiplication(Jd, qd), -1);
-    std::vector<float> JWQ = Matrices::matrixMultiplicationScalar(matrixMultiplication(JW, Q), -1);
-    std::vector<float> ksC = Matrices::matrixMultiplicationScalar(C, ks);
-    std::vector<float> kdCd = Matrices::matrixMultiplicationScalar(Cd, kd);
+		for (int k = 0; k < currentParticles.size(); k++)
+		{
+			int currentPos = getPosition(currentParticles[k]);
+			if (currentPos != -1)
+			{
+				int pIndex = currentPos * dimensions;
+				for (int d = 0; d < dimensions; d++)
+				{
+					Jder(i,pIndex + d) = jd[k][d];
+					J(i,pIndex + d) = j[k][d];
+					Jt(pIndex + d,i) = j[k][d];
+				}
+			}
+			else
+			{
+				std::cout << "Error position -1";
+			}
+		}
+	}
+	MatrixXf JW = J * W;
+	MatrixXf JWJt = JW * Jt;
+	VectorXf Jderq = -1 * Jder * q;
+	VectorXf JWQ = JW * Q;
+	VectorXf KsC = ks * C;
+	VectorXf KdCd = kd * Cder;
+	VectorXf rhs = Jderq - JWQ - KsC - KdCd;
 
-    std::vector<std::vector<float>> right = Jdqd - JWQ - ksC - kdCd;
+	ConjugateGradient<MatrixXf, Lower|Upper> cg;
+	auto lambda = cg.compute(JWJt).solve(rhs);
 
-    //TODO
-    double ConjGrad(int n, implicitMatrix *A, double x[], double b[],
-                    double epsilon,	// how low should we go?
-                    int    *steps);
+	VectorXf Qhat = Jt * lambda;
 
-    ConjugateGradient<std::vector<std::vector<float>>, Lower|Upper> conjugategradient;
-    auto lambda = conjugategradient.compute(JWJTranspose).solve(right);
+	for (int i = 0; i < pVector.size(); i++)
+	{
+		Particle *p = pVector[i];
+		int index = i * dimensions;
 
-    std::vector<float> Qhat = Matrices::matrixMultiplicationScalar(JTranspose, lambda);
+		// std::cout << "index in Qhat: " << index;
+		// std::cout << "Qhat value   : " << Qhat[index];
+		// std::cout << "Qhat value+1 : " << Qhat[index+1];
 
-    for (int i = 0; i < noParticles; i++) {
-        Particle *p = pVector[i];
-        int index = i * dim;
-        p->m_Force[0] += Qhat[index];
-        p->m_Force[1] += Qhat[index + 1];
-    }
-
+		p->m_Force[0] += Qhat[index];
+		p->m_Force[1] += Qhat[index + 1];
+	}
 }
 
 std::vector<float> ParticleSystem::simpleCollision(std::vector<float> state){

@@ -65,8 +65,6 @@ void midpointSolver(ParticleSystem *particleSystem, float dt) {
 	particleSystem->setState(newState);
 }
 
-// TODO::
-// not working properly
 void rungeKuttaSolver(ParticleSystem *particleSystem, float dt) {
 	auto state = particleSystem->getState();
 	auto k1 = vectorTimesScalar(particleSystem->derivEval(), dt);

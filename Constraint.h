@@ -5,10 +5,9 @@
 
 class Constraint {
 public:
-    Constraint();
-    float constraint_value();
-    float constraint_derivative_value();
-    std::vector<Vec2f> jacobian_value();
-    std::vector<Vec2f> jacobian_derivative_value();
-    void draw();
+    virtual float constraint_value() = 0;
+    virtual float constraint_derivative_value() = 0;
+    virtual std::vector<Vec2f> jacobian_value() = 0;
+    virtual std::vector<Vec2f> jacobian_derivative_value() = 0;
+    virtual void draw() = 0;
 };
