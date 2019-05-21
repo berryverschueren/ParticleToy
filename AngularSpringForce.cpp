@@ -23,8 +23,14 @@ void AngularSpringForce::apply(){
     Vec2f v2 = m_p2->m_Position - m_p3->m_Position;
     float lengthV2 = std::sqrt(std::abs(std::pow(v2[0],2))+std::abs(std::pow(v2[1],2)));
 
+    Vec2f normV1 = v1/lengthV1;
+    Vec2f normV2 = v2/lengthV2;
 
-    //auto alpha =
+    float dotProduct = normV1[0]*normV2[0]+normV1[1]*normV2[1];
+
+    float angle = std::acos(dotProduct);
+
+    //m_p1->m_Force +=
 
 
 }

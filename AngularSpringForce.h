@@ -1,5 +1,3 @@
-//#ifndef PARTICLETOY_ANGULARSPRINGFORCE_H
-//#define PARTICLETOY_ANGULARSPRINGFORCE_H
 #pragma once
 #include <vector>
 #include "Particle.h"
@@ -20,4 +18,3 @@ private:
     double const m_dist;     // rest length
     double const m_ks, m_kd; // spring strength constants
 };
-//#endif //PARTICLETOY_ANGULARSPRINGFORCE_H

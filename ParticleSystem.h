@@ -34,6 +34,7 @@ class ParticleSystem {
     void addForce(Force *f);
     void removeLastForce();
     void addConstraint(Constraint *c);
+    void removeLastConstraint();
     void deleteAll();
     int getPosition(Particle *p);
 };

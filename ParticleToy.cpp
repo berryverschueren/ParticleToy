@@ -5,6 +5,7 @@
 #include "Force.h"
 #include "GravityForce.h"
 #include "SpringForce.h"
+#include "AngularSpringForce.h"
 #include "RodConstraint.h"
 #include "CircularWireConstraint.h"
 #include "imageio.h"
@@ -31,6 +32,7 @@ static int frame_number;
 static int solverVersion;
 static bool windForceFlag = false;
 static bool gravityForceFlag = false;
+static bool mouseFlag = false;
 
 ParticleSystem *particleSystem = new ParticleSystem();
 
@@ -96,7 +98,40 @@ void static addGravityForce(){
 }
 
 static void createHair(){
-    //auto alpha
+
+    const Vec2f startingPoint(0.0, 0.5f);
+    const Vec2f offset(0.0, -0.1f);
+
+    auto particle1 = new Particle(startingPoint);
+    auto particle2 = new Particle(startingPoint + offset);
+    auto particle3 = new Particle(startingPoint+ offset+ offset);
+    auto particle4 = new Particle(startingPoint+ offset+ offset+ offset);
+    auto particle5 = new Particle(startingPoint+ offset+ offset+ offset+ offset);
+    auto particle6 = new Particle(startingPoint+ offset+ offset+ offset+ offset+ offset);
+    auto particle7 = new Particle(startingPoint+ offset+ offset+ offset+ offset+ offset+ offset);
+
+    particleSystem->addParticle(particle1);
+    particleSystem->addParticle(particle2);
+    particleSystem->addParticle(particle3);
+    particleSystem->addParticle(particle4);
+    particleSystem->addParticle(particle5);
+    particleSystem->addParticle(particle6);
+    particleSystem->addParticle(particle7);
+
+    float dist = 0.15; float ks=1; float kd=0.5;
+
+    auto force1 = new AngularSpringForce(particle1, particle2, particle3, dist, ks, kd);
+    auto force2 = new AngularSpringForce(particle2, particle3, particle4, dist, ks, kd);
+    auto force3 = new AngularSpringForce(particle3, particle4, particle5, dist, ks, kd);
+    auto force4 = new AngularSpringForce(particle4, particle5, particle6, dist, ks, kd);
+    auto force5 = new AngularSpringForce(particle5, particle6, particle7, dist, ks, kd);
+
+    particleSystem->addForce(force1);
+    particleSystem->addForce(force2);
+    particleSystem->addForce(force3);
+    particleSystem->addForce(force4);
+    particleSystem->addForce(force5);
+
 }
 
 static void createCloth() {
@@ -110,7 +145,7 @@ static void createCloth() {
 	}
 
 
-	double distance = 0.15, springConstant = 0.05, dampingConstant = 0.5;
+	double distance = 0.15, springConstant = 0.05*2, dampingConstant = 0.5;
 
 	// springforce particle with particle beneath it
     for(ii=0; ii<maxRow-1; ii++){
@@ -144,16 +179,16 @@ static void createCloth() {
     }
 
 	// springs to hold the cloth in place (and flip it)
-	Particle *p1 = new Particle(Vec2f(-1.0f, 1.0f));
-	Particle *p2 = new Particle(Vec2f(1.0f, 1.0f));
+	Particle *p1 = new Particle(Vec2f(-0.9f, 0.9f));
+	Particle *p2 = new Particle(Vec2f(0.9f, 0.9f));
 	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance/4, springConstant, dampingConstant);
 	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance/4, springConstant, dampingConstant);
-	SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distance/4, springConstant, dampingConstant);
-	SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distance/4, springConstant, dampingConstant);
+	SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distance/4, springConstant*3, dampingConstant);
+	SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distance/4, springConstant *3, dampingConstant);
 	particleSystem->addParticle(p1);
 	particleSystem->addParticle(p2);
-	particleSystem->addForce(sf1);
-	particleSystem->addForce(sf2);
+	//particleSystem->addForce(sf1);
+	//particleSystem->addForce(sf2);
 	particleSystem->addForce(sf4);
 	particleSystem->addForce(sf3);
 
@@ -338,47 +373,49 @@ static void get_from_UI ()
 
 	if( mouse_release[0] ) {
 
-	    const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
-	    std::cout << "start=" << startPos[0] << "," << startPos[1] << '\n';
+	    if(mouseFlag) {
+            const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
+            std::cout << "start=" << startPos[0] << "," << startPos[1] << '\n';
 
-	    const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
-	    std::cout << "currentPos=" << currentPos[0] << "," << currentPos[1] << '\n';
+            const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+            std::cout << "currentPos=" << currentPos[0] << "," << currentPos[1] << '\n';
 
-	    //Particle* startClosestParticle = closestParticle(startPos);
-        //Particle* currentClosestParticle = closestParticle(currentPos);
+            //Particle* startClosestParticle = closestParticle(startPos);
+            //Particle* currentClosestParticle = closestParticle(currentPos);
 
-        int size = particleSystem->getParticles().size();
-        Particle*   startClosestParticle = NULL;
-        Particle* currentClosestParticle = NULL;
-        float sDist = 1000000.0;
-        float cDist = 1000000.0;
-        for (int k = 0; k < size; ++k) {
-            Vec2f sV = startPos - particleSystem->getParticles()[k]->m_Position;
-            Vec2f cV = currentPos - particleSystem->getParticles()[k]->m_Position;
+            int size = particleSystem->getParticles().size();
+            Particle *startClosestParticle = NULL;
+            Particle *currentClosestParticle = NULL;
+            float sDist = 1000000.0;
+            float cDist = 1000000.0;
+            for (int k = 0; k < size; ++k) {
+                Vec2f sV = startPos - particleSystem->getParticles()[k]->m_Position;
+                Vec2f cV = currentPos - particleSystem->getParticles()[k]->m_Position;
 
-            float sL = std::sqrt(std::abs(std::pow(sV[0], 2)) + std::abs(std::pow(sV[1], 2)));
-            float cL = std::sqrt(std::abs(std::pow(cV[0], 2)) + std::abs(std::pow(cV[1], 2)));
-            if (sL < sDist) {
-                sDist = sL;
-                startClosestParticle = particleSystem->getParticles()[k];
+                float sL = std::sqrt(std::abs(std::pow(sV[0], 2)) + std::abs(std::pow(sV[1], 2)));
+                float cL = std::sqrt(std::abs(std::pow(cV[0], 2)) + std::abs(std::pow(cV[1], 2)));
+                if (sL < sDist) {
+                    sDist = sL;
+                    startClosestParticle = particleSystem->getParticles()[k];
+                }
+                if (cL < cDist) {
+                    cDist = cL;
+                    currentClosestParticle = particleSystem->getParticles()[k];
+                }
             }
-            if (cL < cDist) {
-                cDist = cL;
-                currentClosestParticle = particleSystem->getParticles()[k];
+            if (sDist > 0.1) {
+                startClosestParticle = new Particle(startPos);
+                particleSystem->addParticle(startClosestParticle);
             }
-        }
-        if(sDist > 0.1){
-            startClosestParticle = new Particle(startPos);
-            particleSystem->addParticle(startClosestParticle);
-        }
-        if(cDist > 0.1){
-            currentClosestParticle = new Particle(currentPos);
-            particleSystem->addParticle(currentClosestParticle);
-        }
+            if (cDist > 0.1) {
+                currentClosestParticle = new Particle(currentPos);
+                particleSystem->addParticle(currentClosestParticle);
+            }
 
-        //Particle* p = new Particle(startPos);
-        particleSystem->addForce(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
-        mouse_release[0] = 0;
+            //Particle* p = new Particle(startPos);
+            particleSystem->addForce(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
+            mouse_release[0] = 0;
+        }
 
 	}
 
@@ -422,6 +459,15 @@ static void key_func ( unsigned char key, int x, int y )
 		free_data ();
 		exit ( 0 );
 		break;
+
+	case 'm':
+    case 'M':
+        if(mouseFlag){
+            mouseFlag = false;
+        }else{
+            mouseFlag = true;
+        }
+        break;
 	case '0':
 		solverVersion = 0;
 		break;
@@ -466,15 +512,14 @@ static void mouse_func ( int button, int state, int x, int y )
 	omx = my = y;
 
 	if(!mouse_down[0]){
-        //std::cout << "start" << '\n';
+        std::cout << "start" << '\n';
         //std::cout << "hmy" << hmy << '\n';
 	    hmx=x; hmy=y;
 
 	    //current position
         const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
-        //std::cout << "pos!!!!!!! x=" << currentPos[0] <<" y=" << currentPos[1] << '\n';
-        auto p = new Particle(currentPos);
-        particleSystem->addParticle(p);
+        std::cout << "pos!!!!!!! x=" << currentPos[0] <<" y=" << currentPos[1] << '\n';
+
 
         //closest particle
         int size = particleSystem->getParticles().size();
@@ -490,12 +535,23 @@ static void mouse_func ( int button, int state, int x, int y )
             }
         }
 
-        particleSystem->addForce(new SpringForce(p, closestParticle, dist, 1.5, 0.5));
+        Particle* p = new Particle(currentPos);
+        particleSystem->addParticle(p);
+
+        particleSystem->addForce(new SpringForce(closestParticle, p, 0.5, 1.5, 0.5));
+
+
+        double radius = 0.005f;
+        const Vec2f allowedOffset(radius, 0.0);
+        float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+        auto c1 = new CircularWireConstraint(p, p->m_ConstructPos + allowedOffset, circDistance);
+        particleSystem->addConstraint(c1);
 	}
 	if(mouse_down[button]) {
 	    mouse_release[button] = state == GLUT_UP;
         particleSystem->removeLastForce();
         particleSystem->removeLastParticle();
+        particleSystem->removeLastConstraint();
         //std::cout << "end" << '\n';
         //std::cout << "hmy" << hmy <<'\n';
 

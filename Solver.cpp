@@ -62,6 +62,8 @@ void midpointSolver(ParticleSystem *particleSystem, float dt) {
 	auto derivative2 = particleSystem->derivEval();
 	derivative2 = vectorTimesScalar(derivative2, dt);
 	auto newState = vectorAddition(state, derivative2);
+
+    newState = particleSystem->simpleCollision(newState);
 	particleSystem->setState(newState);
 }
 
@@ -83,6 +85,9 @@ void rungeKuttaSolver(ParticleSystem *particleSystem, float dt) {
 	auto wK4 = vectorTimesScalar(k2, 1.0f/6.0f);
 	auto combined = vectorAddition(vectorAddition(wK1, wK2), vectorAddition(wK3, wK4));
 	auto newState = vectorAddition(state, combined);
+
+    newState = particleSystem->simpleCollision(newState);
+
 	particleSystem->setState(newState);
 }
 

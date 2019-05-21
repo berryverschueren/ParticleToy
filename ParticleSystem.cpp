@@ -193,7 +193,7 @@ std::vector<float> ParticleSystem::simpleCollision(std::vector<float> state){
 
     //floor
     for (int i = 0; i < pVector.size() ; ++i) {
-        if(state[i*4+1] < floor){
+        if(state[i*4+1] <= floor){
             float vN = state[i*4+3];
             if(vN >= 0) {
                 state[i * 4 + 3] = -k_r * vN;
@@ -205,7 +205,7 @@ std::vector<float> ParticleSystem::simpleCollision(std::vector<float> state){
 
     //ceiling
     for (int i = 0; i < pVector.size() ; ++i) {
-        if(state[i*4+1] > ceiling){
+        if(state[i*4+1] >= ceiling){
             float vN = state[i*4+3];
             if(vN <= 0) {
                 state[i * 4 + 3] = -k_r * vN;
@@ -269,6 +269,10 @@ void ParticleSystem::removeLastForce() {
 
 void ParticleSystem::addConstraint(Constraint *c) {
     cVector.push_back(c);
+}
+
+void ParticleSystem::removeLastConstraint() {
+    cVector.pop_back();
 }
 
 void ParticleSystem::deleteAll() {
