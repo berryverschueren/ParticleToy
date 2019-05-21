@@ -70,6 +70,60 @@ void ParticleSystem::applyConstraints() {
     }
 }
 
+std::vector<float> ParticleSystem::simpleCollision(std::vector<float> state){
+
+    float floor = -1.0; float ceiling = 1.0;
+    float wallL = -1.0; float wallR = 1.0;
+    float k_r = 0.8;
+
+    //floor
+    for (int i = 0; i < pVector.size() ; ++i) {
+        if(state[i*4+1] < floor){
+            float vN = state[i*4+3];
+            if(vN >= 0) {
+                state[i * 4 + 3] = -k_r * vN;
+            } else{
+                state[i*4+3] = 0.001;
+            }
+        }
+    }
+
+    //ceiling
+    for (int i = 0; i < pVector.size() ; ++i) {
+        if(state[i*4+1] > ceiling){
+            float vN = state[i*4+3];
+            if(vN <= 0) {
+                state[i * 4 + 3] = -k_r * vN;
+            } else{
+                state[i*4+3] = -0.001;
+            }
+
+        }
+    }
+
+    //walls
+    for (int i = 0; i < pVector.size() ; ++i) {
+        float vN = state[i*4+2];
+        float reversedForce = -k_r*vN;
+        if(state[i*4] < wallL){
+            if(reversedForce >= 0){
+                state[i*4+2] = reversedForce;
+            } else{
+                state[i*4+2] = 0.001;
+            }
+        }
+        if(state[i*4] > wallR){
+            if(reversedForce <= 0) {
+                state[i*4+2] = reversedForce;
+            } else{
+                state[i*4+2] = -0.001;
+            }
+        }
+    }
+
+    return state;
+}
+
 std::vector<Particle*> ParticleSystem::getParticles() {
     return pVector;
 }
@@ -86,10 +140,24 @@ void ParticleSystem::addParticle(Particle *p) {
     pVector.push_back(p);
 }
 
+void ParticleSystem::removeLastParticle() {
+    pVector.pop_back();
+}
+
 void ParticleSystem::addForce(Force *f) {
     fVector.push_back(f);
 }
 
+void ParticleSystem::removeLastForce() {
+    fVector.pop_back();
+}
+
 void ParticleSystem::addConstraint(Constraint *c) {
     cVector.push_back(c);
+}
+
+void ParticleSystem::deleteAll() {
+    pVector.clear();
+    fVector.clear();
+    cVector.clear();
 }

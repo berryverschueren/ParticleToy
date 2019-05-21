@@ -41,3 +41,4 @@ include/
 .idea/modules.xml
 .idea/ParticleToy.iml
 .idea/vcs.xml
+.idea/workspace.xml

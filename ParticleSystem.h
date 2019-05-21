@@ -16,6 +16,7 @@ class ParticleSystem {
     std::vector<float> getState();
     std::vector<float> derivEval();
     void setState(std::vector<float> state);
+    std::vector<float> simpleCollision(std::vector<float> state);
     void resetForces();
     void applyForces();
     void applyConstraints();
@@ -23,6 +24,9 @@ class ParticleSystem {
     std::vector<Force*> getForces();
     std::vector<Constraint*> getConstraints();
     void addParticle(Particle *p);
+    void removeLastParticle();
     void addForce(Force *f);
+    void removeLastForce();
     void addConstraint(Constraint *c);
+    void deleteAll();
 };

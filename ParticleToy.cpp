@@ -29,6 +29,8 @@ static int dsim;
 static int dump_frames;
 static int frame_number;
 static int solverVersion;
+static bool windForceFlag = false;
+static bool gravityForceFlag = false;
 
 ParticleSystem *particleSystem = new ParticleSystem();
 
@@ -79,6 +81,24 @@ static void clear_data ( void )
 	}
 }
 
+void static addGravityForce(){
+    if(!gravityForceFlag){
+        std::cout << "Added gravity forces"<< '\n';
+        const Vec2f g(0.0,-0.001f);
+        auto gravity = new GravityForce(particleSystem->getParticles(), g);
+        particleSystem->addForce(gravity);
+        gravityForceFlag = true;
+    } else{
+        std::cout << "Added gravity forces"<< '\n';
+        particleSystem->removeLastForce();
+        gravityForceFlag = false;
+    }
+}
+
+static void createHair(){
+    //auto alpha
+}
+
 static void createCloth() {
 	const Vec2f startingPoint(-0.5f, -0.5f);
 	int ii, jj, maxRow = 10, maxCol = 10;
@@ -89,8 +109,6 @@ static void createCloth() {
 		}
 	}
 
-	auto gravity = new GravityForce(particleSystem->getParticles());
-	particleSystem->addForce(gravity);
 
 	double distance = 0.15, springConstant = 0.05, dampingConstant = 0.5;
 
@@ -102,7 +120,7 @@ static void createCloth() {
             particleSystem->addForce(spring);
         }
     }
-
+    //addGravityForce();
 	// springforce particle with particle to the right of it
     for(ii=0; ii<maxRow; ii++){
         for(jj=0; jj<maxCol-1; jj++){
@@ -111,7 +129,7 @@ static void createCloth() {
             particleSystem->addForce(spring);
         }
     }
-	
+
 	// springforce particle with particle to the right and beneath it
 	// springforce particle with particle to the left and beneath it
     for(ii=0; ii<maxRow-1; ii++){
@@ -128,8 +146,8 @@ static void createCloth() {
 	// springs to hold the cloth in place (and flip it)
 	Particle *p1 = new Particle(Vec2f(-1.0f, 1.0f));
 	Particle *p2 = new Particle(Vec2f(1.0f, 1.0f));
-	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[0], 2*distance, springConstant, dampingConstant);
-	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], 2*distance, springConstant, dampingConstant);
+	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[0], 0.8, 2, dampingConstant);
+	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], 0.8, 2, dampingConstant);
 	particleSystem->addParticle(p1);
 	particleSystem->addParticle(p2);
 	particleSystem->addForce(sf1);
@@ -161,6 +179,7 @@ static void init_system(void)
 
 	createCloth();
 
+
 	//particleSystem->addParticle(new Particle(center + offset));
 	//particleSystem->addParticle(new Particle(center + offset + offset));
 	//particleSystem->addParticle(new Particle(center + offset + offset + offset));
@@ -172,6 +191,22 @@ static void init_system(void)
 	// constraints...
 	//delete_this_dummy_rod = new RodConstraint(particleSystem->getParticles()[1], particleSystem->getParticles()[2], dist);
 	//delete_this_dummy_wire = new CircularWireConstraint(particleSystem->getParticles()[0], center, dist);
+}
+
+
+
+void static addHorizontalForce(){
+    if(!windForceFlag){
+        std::cout << "Added horizontal forces"<< '\n';
+        auto gravity = new GravityForce(particleSystem->getParticles(), Vec2f(-0.00005f,0.0));
+        particleSystem->addForce(gravity);
+        windForceFlag = true;
+    } else{
+        std::cout << "Removed horizontal forces"<< '\n';
+        particleSystem->removeLastForce();
+        windForceFlag = false;
+    }
+
 }
 
 /*
@@ -393,6 +428,25 @@ static void key_func ( unsigned char key, int x, int y )
 	case '3':
 		solverVersion = 3;
 		break;
+
+	case 'g':
+    case 'G':
+        addGravityForce();
+        break;
+    case 'h':
+    case 'H':
+        addHorizontalForce();
+        break;
+    case 'j':
+    case 'J':
+        particleSystem->deleteAll();
+        createHair();
+        break;
+    case 'k':
+    case 'K':
+        particleSystem->deleteAll();
+        createCloth();
+        break;
 	case ' ':
 		dsim = !dsim;
 		break;
@@ -405,9 +459,47 @@ static void mouse_func ( int button, int state, int x, int y )
 	omx = mx = x;
 	omx = my = y;
 
-	if(!mouse_down[0]){hmx=x; hmy=y;}
-	if(mouse_down[button]) mouse_release[button] = state == GLUT_UP;
-	if(mouse_down[button]) mouse_shiftclick[button] = glutGetModifiers()==GLUT_ACTIVE_SHIFT;
+	if(!mouse_down[0]){
+        //std::cout << "start" << '\n';
+        //std::cout << "hmy" << hmy << '\n';
+	    hmx=x; hmy=y;
+
+	    //current position
+        const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+        //std::cout << "pos!!!!!!! x=" << currentPos[0] <<" y=" << currentPos[1] << '\n';
+        auto p = new Particle(currentPos);
+        particleSystem->addParticle(p);
+
+        //closest particle
+        int size = particleSystem->getParticles().size();
+        Particle* closestParticle = NULL;
+        float dist = 1000000.0;
+        for (int k = 0; k < size; ++k) {
+            Vec2f vec = currentPos - particleSystem->getParticles()[k]->m_Position;
+
+            float length = std::sqrt(std::abs(std::pow(vec[0], 2)) + std::abs(std::pow(vec[1], 2)));
+            if (length < dist) {
+                dist = length;
+                closestParticle = particleSystem->getParticles()[k];
+            }
+        }
+
+        particleSystem->addForce(new SpringForce(p, closestParticle, dist, 1.5, 0.5));
+	}
+	if(mouse_down[button]) {
+	    mouse_release[button] = state == GLUT_UP;
+        particleSystem->removeLastForce();
+        particleSystem->removeLastParticle();
+        //std::cout << "end" << '\n';
+        //std::cout << "hmy" << hmy <<'\n';
+
+        //std::cout << "omx" << omx <<'\n';
+
+	}
+	if(mouse_down[button]) {
+	    mouse_shiftclick[button] = glutGetModifiers()==GLUT_ACTIVE_SHIFT;
+
+	}
 	mouse_down[button] = state == GLUT_DOWN;
 }
 
@@ -508,6 +600,8 @@ int main ( int argc, char ** argv )
 	printf ( "\t Dump frames by pressing the 'd' key\n" );
 	printf ( "\t Quit by pressing the 'q' key\n" );
 	printf ( "\t Set solver version 0,1,2,3 by pressing the matching number key\n" );
+    printf ( "\t Toggle 'h' or 'g' for horizontal wind/vertical gravity force (global)\n" );
+    printf ( "\t Toggle 'j' for hair or 'k' for cloth\n" );
 
 	dsim = 0;
 	dump_frames = 0;

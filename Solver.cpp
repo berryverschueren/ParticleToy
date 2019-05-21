@@ -47,6 +47,9 @@ void explicitEulerSolver(ParticleSystem *particleSystem, float dt) {
 	auto derivative = particleSystem->derivEval();
 	derivative = vectorTimesScalar(derivative, dt);
 	auto newState = vectorAddition(state, derivative);
+
+	newState = particleSystem->simpleCollision(newState);
+
 	particleSystem->setState(newState);
 }
 
