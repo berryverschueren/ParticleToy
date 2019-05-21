@@ -130,12 +130,14 @@ static void createCloth() {
 	Particle *p2 = new Particle(Vec2f(1.0f, 1.0f));
 	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance/4, springConstant, dampingConstant);
 	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance/4, springConstant, dampingConstant);
-	// SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[0], 2*distance, springConstant, dampingConstant);
-	// SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], 2*distance, springConstant, dampingConstant);
+	SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distance/4, springConstant, dampingConstant);
+	SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distance/4, springConstant, dampingConstant);
 	particleSystem->addParticle(p1);
 	particleSystem->addParticle(p2);
 	particleSystem->addForce(sf1);
 	particleSystem->addForce(sf2);
+	particleSystem->addForce(sf4);
+	particleSystem->addForce(sf3);
 
 	double radius = 0.005f;
 	const Vec2f allowedOffset(radius, 0.0);
