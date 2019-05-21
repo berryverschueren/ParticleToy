@@ -155,15 +155,15 @@ static void createCloth() {
 
 
 	// constraint to hold cloth in place from the top
-	// double radius = 0.005f;
-	// const Vec2f allowedOffset(radius, 0.0);
-	// float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
-	// auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
-	// auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
-	// auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
-	// auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
-	// particleSystem->addConstraint(constraint1);
-	// particleSystem->addConstraint(constraint2);
+	double radius = 0.005f;
+	const Vec2f allowedOffset(radius, 0.0);
+	float circDistance = sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+	auto centerPoint1 = particleSystem->getParticles()[0]->m_ConstructPos + allowedOffset;
+	auto constraint1 = new CircularWireConstraint(particleSystem->getParticles()[0], centerPoint1, circDistance);
+	auto centerPoint2 = particleSystem->getParticles()[maxRow*(maxCol-1)]->m_ConstructPos + allowedOffset;
+	auto constraint2 = new CircularWireConstraint(particleSystem->getParticles()[maxRow*(maxCol-1)], centerPoint2, circDistance);
+	particleSystem->addConstraint(constraint1);
+	particleSystem->addConstraint(constraint2);
 }
 
 static void init_system(void)

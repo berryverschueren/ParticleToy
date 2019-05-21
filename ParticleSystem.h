@@ -3,6 +3,7 @@
 #include "Particle.h"
 #include "Force.h"
 #include "Constraint.h"
+#include "linearSolver.h"
 
 class ParticleSystem {
     public: 
