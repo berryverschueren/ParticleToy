@@ -309,12 +309,7 @@ static void createCloth() {
 	auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
 	particleSystem->addConstraint(c1);
 	particleSystem->addConstraint(c2);
-
-	// for (int x = 0; x < maxRow; x++) {
-	// 	Particle *part = particleSystem->getParticles()[(maxCol*x)-1];
-	// 	auto con = new CircularWireConstraint(part, part->m_ConstructPos + allowedOffset, circDistance);
-	// 	particleSystem->addConstraint(con);
-	// }
+	
 }
 
 static void init_system(void)
@@ -325,23 +320,7 @@ static void init_system(void)
 	const Vec2f center(0.0, 0.0);
 	const Vec2f offset(dist, 0.0);
 
-	// Create three particles, attach them to each other, then add a
-	// circular wire constraint to the first.
-
 	createCloth();
-
-
-	//particleSystem->addParticle(new Particle(center + offset));
-	//particleSystem->addParticle(new Particle(center + offset + offset));
-	//particleSystem->addParticle(new Particle(center + offset + offset + offset));
-	
-	//fVector.push_back(new GravityForce(pVector));
-	//particleSystem->addForce(new SpringForce(particleSystem->getParticles()[0], particleSystem->getParticles()[1], dist+dist, 0.05, 0.5));
-
-	// You shoud replace these with a vector generalized forces and one of
-	// constraints...
-	//delete_this_dummy_rod = new RodConstraint(particleSystem->getParticles()[1], particleSystem->getParticles()[2], dist);
-	//delete_this_dummy_wire = new CircularWireConstraint(particleSystem->getParticles()[0], center, dist);
 }
 
 

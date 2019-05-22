@@ -9,13 +9,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a2fe7da4-0765-447e-af01-235552dfb62b" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AngularSpringForce.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/AngularSpringForce.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AngularSpringForce.h" beforeDir="false" afterPath="$PROJECT_DIR$/AngularSpringForce.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ParticleToy.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ParticleToy.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SpringForce.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/SpringForce.cpp" afterDir="false" />
-    </list>
+    <list default="true" id="a2fe7da4-0765-447e-af01-235552dfb62b" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -147,7 +141,7 @@
     </option>
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="-8" />
     <option name="y" value="-8" />
     <option name="width" value="974" />
@@ -205,12 +199,12 @@
       <workItem from="1558168514383" duration="608000" />
       <workItem from="1558427590417" duration="7545000" />
       <workItem from="1558446830532" duration="5765000" />
-      <workItem from="1558470469027" duration="10882000" />
+      <workItem from="1558470469027" duration="11297000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="41160000" />
+    <option name="totallyTimeSpent" value="41575000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1064" extended-state="6" />
