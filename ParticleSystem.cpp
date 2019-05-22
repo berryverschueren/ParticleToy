@@ -84,41 +84,30 @@ void ParticleSystem::applyConstraints() {
     const int dimensions = 2;
 	int vectorSize = pVector.size() * dimensions;
 	int constraintsSize = cVector.size();
-    
 	float ks = 0.005f;
 	float kd = 0.05f;
-    // double ks = 0.05;
-    // double kd = 0.5;
 
 	VectorXf q = VectorXf::Zero(vectorSize);
 	VectorXf Q = VectorXf::Zero(vectorSize);
 	MatrixXf W = MatrixXf::Zero(vectorSize, vectorSize);
-	VectorXf C = VectorXf::Zero(constraintsSize);
-	VectorXf Cder = VectorXf::Zero(constraintsSize);
-	MatrixXf J = MatrixXf::Zero(constraintsSize, vectorSize);
-	MatrixXf Jt = MatrixXf::Zero(vectorSize, constraintsSize);
-	MatrixXf Jder = MatrixXf::Zero(constraintsSize, vectorSize);
   
-	for (int i = 0; i < pVector.size(); i ++)
-	{
+	for (int i = 0; i < pVector.size(); i ++) {
 		Particle *p = pVector[i];
-		for (int d = 0; d < dimensions; d++)
-		{
+		for (int d = 0; d < dimensions; d++) {
 			W(dimensions * i + d,dimensions*i + d) = 1 / p->m_Mass;
 			Q[dimensions*i + d] = p->m_Force[d];
 			q[dimensions*i + d] = p->m_Velocity[d];
 		}
 	}
 
-	for (int i = 0; i < constraintsSize; i++)
-	{
-		Constraint *c = cVector[i];
+	VectorXf C = VectorXf::Zero(constraintsSize);
+	VectorXf Cder = VectorXf::Zero(constraintsSize);
 
+	for (int i = 0; i < constraintsSize; i++) {
+		Constraint *c = cVector[i];
         std::vector<Vec2f> j;
         std::vector<Vec2f> jd;
-
         std::vector<Particle *> currentParticles;
-
 
         if(CircularWireConstraint* con = dynamic_cast<CircularWireConstraint*>(c)) {
             C[i] = con->constraint_value();
@@ -134,30 +123,27 @@ void ParticleSystem::applyConstraints() {
             currentParticles.push_back(con->m_p1);
             currentParticles.push_back(con->m_p2);
         }
-        else
-        {
+        else {
             std::cout << "Couldnt cast constraint";
         }
 
-		for (int k = 0; k < currentParticles.size(); k++)
-		{
+	    MatrixXf J = MatrixXf::Zero(constraintsSize, vectorSize);
+	    MatrixXf Jt = MatrixXf::Zero(vectorSize, constraintsSize);
+        MatrixXf Jder = MatrixXf::Zero(constraintsSize, vectorSize);
+		
+        for (int k = 0; k < currentParticles.size(); k++) {
 			int currentPos = getPosition(currentParticles[k]);
-			if (currentPos != -1)
-			{
+			if (currentPos != -1) {
 				int pIndex = currentPos * dimensions;
-				for (int d = 0; d < dimensions; d++)
-				{
+				for (int d = 0; d < dimensions; d++) {
 					Jder(i,pIndex + d) = jd[k][d];
 					J(i,pIndex + d) = j[k][d];
 					Jt(pIndex + d,i) = j[k][d];
 				}
 			}
-			else
-			{
-				std::cout << "Error position -1";
-			}
 		}
 	}
+
 	MatrixXf JW = J * W;
 	MatrixXf JWJt = JW * Jt;
 	VectorXf Jderq = -1 * Jder * q;
@@ -168,18 +154,11 @@ void ParticleSystem::applyConstraints() {
 
 	ConjugateGradient<MatrixXf, Lower|Upper> cg;
 	auto lambda = cg.compute(JWJt).solve(rhs);
-
 	VectorXf Qhat = Jt * lambda;
 
-	for (int i = 0; i < pVector.size(); i++)
-	{
+	for (int i = 0; i < pVector.size(); i++) {
 		Particle *p = pVector[i];
 		int index = i * dimensions;
-
-		// std::cout << "index in Qhat: " << index;
-		// std::cout << "Qhat value   : " << Qhat[index];
-		// std::cout << "Qhat value+1 : " << Qhat[index+1];
-
 		p->m_Force[0] += Qhat[index];
 		p->m_Force[1] += Qhat[index + 1];
 	}
