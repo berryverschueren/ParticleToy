@@ -1,8 +1,8 @@
 #include "AngularSpringForce.h"
 #include <GL/glut.h>
 
-AngularSpringForce::AngularSpringForce(Particle *p1, Particle *p2, Particle *p3, double dist, double ks, double kd):
-        m_p1(p1), m_p2(p2), m_p3(p3), m_dist(dist), m_ks(ks), m_kd(kd) {}
+AngularSpringForce::AngularSpringForce(Particle *p1, Particle *p2, Particle *p3, double alpha, double ks, double kd):
+        m_p1(p1), m_p2(p2), m_p3(p3), m_alpha(alpha), m_ks(ks), m_kd(kd) {}
 
 void AngularSpringForce::draw()
 {
@@ -17,7 +17,6 @@ void AngularSpringForce::draw()
 }
 
 void AngularSpringForce::apply(){
-    ////not sure
     Vec2f v1 = m_p1->m_Position - m_p2->m_Position;
     float lengthV1 = std::sqrt(std::abs(std::pow(v1[0],2))+std::abs(std::pow(v1[1],2)));
     Vec2f v2 = m_p2->m_Position - m_p3->m_Position;
@@ -28,8 +27,21 @@ void AngularSpringForce::apply(){
 
     float dotProduct = normV1[0]*normV2[0]+normV1[1]*normV2[1];
 
-    float angle = std::acos(dotProduct);
+    float C = std::acos(dotProduct)-m_alpha;
 
+    /*Vec2f l = m_p1->m_Position - m_p2->m_Position;
+    Vec2f vi1 = m_p1->m_Velocity - m_p2->m_Velocity;
+    Vec2f vi1 = m_p1->m_Velocity - m_p2->m_Velocity;
+
+    float lengthL = std::sqrt(std::abs(std::pow(l[0],2))+std::abs(std::pow(l[1],2)));
+    float dot = i[0]*l[0]+i[1]*l[1];
+
+    Vec2f f1 = -(m_ks*(lengthL-m_dist)+m_kd*(dot/lengthL))*(l/lengthL);
+    Vec2f f2 = -f1;
+
+    m_p1->m_Force += f1;
+    m_p2->m_Force += f2;
+*/
     //m_p1->m_Force +=
 
 

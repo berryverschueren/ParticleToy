@@ -44,11 +44,6 @@ static int mouse_shiftclick[3];
 static int omx, omy, mx, my;
 static int hmx, hmy;
 
-//static SpringForce * delete_this_dummy_spring = NULL;
-static RodConstraint * delete_this_dummy_rod = NULL;
-static CircularWireConstraint * delete_this_dummy_wire = NULL;
-
-
 /*
 ----------------------------------------------------------------------
 free/clear/allocate simulation data
@@ -57,21 +52,7 @@ free/clear/allocate simulation data
 
 static void free_data ( void )
 {
-	particleSystem->getParticles().clear();
-	if (delete_this_dummy_rod) {
-		delete delete_this_dummy_rod;
-		delete_this_dummy_rod = NULL;
-	}
-	particleSystem->getForces().clear();
-	//fVector.clear();
-	//if (delete_this_dummy_spring) {
-	//	delete delete_this_dummy_spring;
-	//	delete_this_dummy_spring = NULL;
-	//}
-	if (delete_this_dummy_wire) {
-		delete delete_this_dummy_wire;
-		delete_this_dummy_wire = NULL;
-	}
+	particleSystem->deleteAll();
 }
 
 static void clear_data ( void )
@@ -86,7 +67,7 @@ static void clear_data ( void )
 void static addGravityForce(){
     if(!gravityForceFlag){
         std::cout << "Added gravity forces"<< '\n';
-        const Vec2f g(0.0,-0.001f);
+        const Vec2f g(0.0,-0.0015f);
         auto gravity = new GravityForce(particleSystem->getParticles(), g);
         particleSystem->addForce(gravity);
         gravityForceFlag = true;
@@ -97,41 +78,151 @@ void static addGravityForce(){
     }
 }
 
-static void createHair(){
+static void createHorizontalContraintCloth(){
+    const Vec2f startingPoint(-0.5f, -0.5f);
+    int ii, jj, maxRow = 10, maxCol = 10;
+    for (ii=0; ii<maxRow; ii++) {
+        for (jj=0; jj<maxCol; jj++) {
+            auto particle = new Particle(startingPoint + Vec2f(1.0f/maxRow*ii, 1.0f/maxCol*jj));
+            particleSystem->addParticle(particle);
+        }
+    }
 
-    const Vec2f startingPoint(0.0, 0.5f);
-    const Vec2f offset(0.0, -0.1f);
 
-    auto particle1 = new Particle(startingPoint);
-    auto particle2 = new Particle(startingPoint + offset);
-    auto particle3 = new Particle(startingPoint+ offset+ offset);
-    auto particle4 = new Particle(startingPoint+ offset+ offset+ offset);
-    auto particle5 = new Particle(startingPoint+ offset+ offset+ offset+ offset);
-    auto particle6 = new Particle(startingPoint+ offset+ offset+ offset+ offset+ offset);
-    auto particle7 = new Particle(startingPoint+ offset+ offset+ offset+ offset+ offset+ offset);
+    double distance = 0.1, springConstant = 0.1, dampingConstant = 0.5;
+    double distanceSpring = 0.25;
+    // springforce particle with particle beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+                                          particleSystem->getParticles()[jj*maxRow+ii+1], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+    //addGravityForce();
+    // springforce particle with particle to the right of it
+    for(jj=0; jj<maxCol-1; jj++){
+        auto rod1 = new RodConstraint(particleSystem->getParticles()[jj*maxRow+0],
+                                      particleSystem->getParticles()[(jj+1)*maxRow+0], 0.1);
+        auto rod2 = new RodConstraint(particleSystem->getParticles()[jj*maxRow+(maxRow-1)],
+                                      particleSystem->getParticles()[(jj+1)*maxRow+(maxRow-1)], 0.1);
+        particleSystem->addConstraint(rod1);
+        particleSystem->addConstraint(rod2);
+    }
+    for(ii=1; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+                                          particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
 
-    particleSystem->addParticle(particle1);
-    particleSystem->addParticle(particle2);
-    particleSystem->addParticle(particle3);
-    particleSystem->addParticle(particle4);
-    particleSystem->addParticle(particle5);
-    particleSystem->addParticle(particle6);
-    particleSystem->addParticle(particle7);
+    // springforce particle with particle to the right and beneath it
+    // springforce particle with particle to the left and beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+            auto spring1 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+                                           particleSystem->getParticles()[(jj+1)*maxRow+ii+1], distance, springConstant, dampingConstant);
+            auto spring2 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii+1],
+                                           particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring1);
+            particleSystem->addForce(spring2);
+        }
+    }
 
-    float dist = 0.15; float ks=1; float kd=0.5;
 
-    auto force1 = new AngularSpringForce(particle1, particle2, particle3, dist, ks, kd);
-    auto force2 = new AngularSpringForce(particle2, particle3, particle4, dist, ks, kd);
-    auto force3 = new AngularSpringForce(particle3, particle4, particle5, dist, ks, kd);
-    auto force4 = new AngularSpringForce(particle4, particle5, particle6, dist, ks, kd);
-    auto force5 = new AngularSpringForce(particle5, particle6, particle7, dist, ks, kd);
 
-    particleSystem->addForce(force1);
-    particleSystem->addForce(force2);
-    particleSystem->addForce(force3);
-    particleSystem->addForce(force4);
-    particleSystem->addForce(force5);
+    // springs to hold the cloth in place (and flip it)
+    Particle *p1 = new Particle(Vec2f(-0.9f, 0.9f));
+    Particle *p2 = new Particle(Vec2f(0.9f, 0.9f));
+    SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance, springConstant, dampingConstant);
+    SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance, springConstant, dampingConstant);
+    SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distanceSpring, springConstant*2, dampingConstant);
+    SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distanceSpring, springConstant*2, dampingConstant);
+    particleSystem->addParticle(p1);
+    particleSystem->addParticle(p2);
+    particleSystem->addForce(sf1);
+    particleSystem->addForce(sf2);
+    //particleSystem->addForce(sf4);
+    //particleSystem->addForce(sf3);
 
+
+    double radius = 0.005f;
+    const Vec2f allowedOffset(radius, 0.0);
+    float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+    auto c1 = new CircularWireConstraint(p1, p1->m_ConstructPos + allowedOffset, circDistance);
+    auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
+    particleSystem->addConstraint(c1);
+    particleSystem->addConstraint(c2);
+}
+
+static void createSpringCloth(){
+    const Vec2f startingPoint(-0.5f, -0.5f);
+    int ii, jj, maxRow = 10, maxCol = 10;
+    for (ii=0; ii<maxRow; ii++) {
+        for (jj=0; jj<maxCol; jj++) {
+            auto particle = new Particle(startingPoint + Vec2f(1.0f/maxRow*ii, 1.0f/maxCol*jj));
+            particleSystem->addParticle(particle);
+        }
+    }
+
+
+    double distance = 0.1, springConstant = 0.1, dampingConstant = 0.5;
+    double distanceSpring = 0.25;
+    // springforce particle with particle beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+                                          particleSystem->getParticles()[jj*maxRow+ii+1], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+    //addGravityForce();
+    // springforce particle with particle to the right of it
+    for(ii=0; ii<maxRow; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+            auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+                                          particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring);
+        }
+    }
+
+    // springforce particle with particle to the right and beneath it
+    // springforce particle with particle to the left and beneath it
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=0; jj<maxCol-1; jj++){
+            auto spring1 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
+                                           particleSystem->getParticles()[(jj+1)*maxRow+ii+1], distance, springConstant, dampingConstant);
+            auto spring2 = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii+1],
+                                           particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
+            particleSystem->addForce(spring1);
+            particleSystem->addForce(spring2);
+        }
+    }
+
+
+
+    // springs to hold the cloth in place (and flip it)
+    Particle *p1 = new Particle(Vec2f(-0.9f, 0.9f));
+    Particle *p2 = new Particle(Vec2f(0.9f, 0.9f));
+    SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance, springConstant, dampingConstant);
+    SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance, springConstant, dampingConstant);
+    SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distanceSpring, springConstant, dampingConstant);
+    SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distanceSpring, springConstant, dampingConstant);
+    particleSystem->addParticle(p1);
+    particleSystem->addParticle(p2);
+    particleSystem->addForce(sf1);
+    particleSystem->addForce(sf2);
+    particleSystem->addForce(sf4);
+    particleSystem->addForce(sf3);
+
+    double radius = 0.005f;
+    const Vec2f allowedOffset(radius, 0.0);
+    float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+    auto c1 = new CircularWireConstraint(p1, p1->m_ConstructPos + allowedOffset, circDistance);
+    auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
+    particleSystem->addConstraint(c1);
+    particleSystem->addConstraint(c2);
 }
 
 static void createCloth() {
@@ -145,11 +236,19 @@ static void createCloth() {
 	}
 
 
-	double distance = 0.15, springConstant = 0.05*2, dampingConstant = 0.5;
-
+	double distance = 0.1, springConstant = 0.1, dampingConstant = 0.5;
+    double distanceSpring = 0.25;
 	// springforce particle with particle beneath it
     for(ii=0; ii<maxRow-1; ii++){
-        for(jj=0; jj<maxCol; jj++){
+        auto rod1 = new RodConstraint(particleSystem->getParticles()[0*maxRow+ii],
+                                        particleSystem->getParticles()[0*maxRow+ii+1], 0.1);
+        auto rod2 = new RodConstraint(particleSystem->getParticles()[(maxCol-1)*maxRow+ii],
+                                        particleSystem->getParticles()[(maxCol-1)*maxRow+ii+1], 0.1);
+        particleSystem->addConstraint(rod1);
+        particleSystem->addConstraint(rod2);
+    }
+    for(ii=0; ii<maxRow-1; ii++){
+        for(jj=1; jj<maxCol-1; jj++){
             auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
 				particleSystem->getParticles()[jj*maxRow+ii+1], distance, springConstant, dampingConstant);
             particleSystem->addForce(spring);
@@ -157,7 +256,15 @@ static void createCloth() {
     }
     //addGravityForce();
 	// springforce particle with particle to the right of it
-    for(ii=0; ii<maxRow; ii++){
+    for(jj=0; jj<maxCol-1; jj++){
+        auto rod1 = new RodConstraint(particleSystem->getParticles()[jj*maxRow+0],
+                                      particleSystem->getParticles()[(jj+1)*maxRow+0], 0.1);
+        auto rod2 = new RodConstraint(particleSystem->getParticles()[jj*maxRow+(maxRow-1)],
+                                      particleSystem->getParticles()[(jj+1)*maxRow+(maxRow-1)], 0.1);
+        particleSystem->addConstraint(rod1);
+        particleSystem->addConstraint(rod2);
+    }
+    for(ii=1; ii<maxRow-1; ii++){
         for(jj=0; jj<maxCol-1; jj++){
             auto spring = new SpringForce(particleSystem->getParticles()[jj*maxRow+ii],
 				particleSystem->getParticles()[(jj+1)*maxRow+ii], distance, springConstant, dampingConstant);
@@ -178,19 +285,22 @@ static void createCloth() {
         }
     }
 
+
+
 	// springs to hold the cloth in place (and flip it)
 	Particle *p1 = new Particle(Vec2f(-0.9f, 0.9f));
 	Particle *p2 = new Particle(Vec2f(0.9f, 0.9f));
-	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance/4, springConstant, dampingConstant);
-	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance/4, springConstant, dampingConstant);
-	SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distance/4, springConstant*3, dampingConstant);
-	SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distance/4, springConstant *3, dampingConstant);
+	SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance, springConstant, dampingConstant);
+	SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance, springConstant, dampingConstant);
+	SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distanceSpring, springConstant*2, dampingConstant);
+	SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distanceSpring, springConstant*2, dampingConstant);
 	particleSystem->addParticle(p1);
 	particleSystem->addParticle(p2);
-	//particleSystem->addForce(sf1);
-	//particleSystem->addForce(sf2);
+	particleSystem->addForce(sf1);
+	particleSystem->addForce(sf2);
 	particleSystem->addForce(sf4);
 	particleSystem->addForce(sf3);
+
 
 	double radius = 0.005f;
 	const Vec2f allowedOffset(radius, 0.0);
@@ -209,7 +319,7 @@ static void createCloth() {
 
 static void init_system(void)
 {
-	solverVersion = 0;
+	solverVersion = 3;
 
 	const double dist = 0.2;
 	const Vec2f center(0.0, 0.0);
@@ -239,7 +349,7 @@ static void init_system(void)
 void static addHorizontalForce(){
     if(!windForceFlag){
         std::cout << "Added horizontal forces"<< '\n';
-        auto gravity = new GravityForce(particleSystem->getParticles(), Vec2f(-0.00005f,0.0));
+        auto gravity = new GravityForce(particleSystem->getParticles(), Vec2f(-0.002f,0.0));
         particleSystem->addForce(gravity);
         windForceFlag = true;
     } else{
@@ -313,11 +423,11 @@ static void draw_forces ( void )
 
 static void draw_constraints ( void )
 {
-	// change this to iteration over full set
-	if (delete_this_dummy_rod)
-		delete_this_dummy_rod->draw();
-	if (delete_this_dummy_wire)
-		delete_this_dummy_wire->draw();
+    int ii, size = particleSystem->getConstraints().size();
+
+    for (ii = 0; ii < size; ii++) {
+        particleSystem->getConstraints()[ii]->draw();
+    }
 }
 
 /*
@@ -325,7 +435,7 @@ static void draw_constraints ( void )
 relates mouse movements to particle toy construction
 ----------------------------------------------------------------------
 */
-
+/*
 static Particle* closestParticle(Vec2f pos){
     int size = particleSystem->getParticles().size();
     Particle* closestParticle = NULL;
@@ -342,7 +452,7 @@ static Particle* closestParticle(Vec2f pos){
         closestParticle = new Particle(pos);
     }
     return closestParticle;
-}
+}*/
 
 static void get_from_UI ()
 {
@@ -492,12 +602,24 @@ static void key_func ( unsigned char key, int x, int y )
     case 'j':
     case 'J':
         particleSystem->deleteAll();
-        createHair();
+
+        gravityForceFlag = false;
+        windForceFlag = false;
+        createSpringCloth();
         break;
     case 'k':
     case 'K':
         particleSystem->deleteAll();
+        gravityForceFlag = false;
+        windForceFlag = false;
         createCloth();
+        break;
+    case 'l':
+    case 'L':
+        particleSystem->deleteAll();
+        gravityForceFlag = false;
+        windForceFlag = false;
+        createHorizontalContraintCloth();
         break;
 	case ' ':
 		dsim = !dsim;
@@ -647,7 +769,7 @@ int main ( int argc, char ** argv )
 
 	if ( argc == 1 ) {
 		N = 64;
-		dt = 0.1f;
+		dt = 0.05f;//0.1f
 		d = 5.f;
 		fprintf ( stderr, "Using defaults : N=%d dt=%g d=%g\n",
 			N, dt, d );
@@ -661,9 +783,12 @@ int main ( int argc, char ** argv )
 	printf ( "\t Toggle construction/simulation display with the spacebar key\n" );
 	printf ( "\t Dump frames by pressing the 'd' key\n" );
 	printf ( "\t Quit by pressing the 'q' key\n" );
-	printf ( "\t Set solver version 0,1,2,3 by pressing the matching number key\n" );
-    printf ( "\t Toggle 'h' or 'g' for horizontal wind/vertical gravity force (global)\n" );
-    printf ( "\t Toggle 'j' for hair or 'k' for cloth\n" );
+	printf ( "\t Set solver version 0(skeleton),1(Euler),2(Mid-point),3(Runge-Kutta 4) by pressing the matching number key\n" );
+    printf ( "\t Toggle 'h' for horizontal wind force or 'g' vertical gravity force (global)\n" );
+    printf ( "\t set scene with 'j' full spring cloth\n" );
+    printf ( "\t set scene with 'k' cloth with fully bordered rod constraints\n" );
+    printf ( "\t set scene with 'l' cloth with horizontal bordered rod constraints\n" );
+    printf ( "\t Toggle 'm' for mouse interaction -> spring construction\n" );
 
 	dsim = 0;
 	dump_frames = 0;
