@@ -33,6 +33,7 @@ static int solverVersion;
 static bool windForceFlag = false;
 static bool gravityForceFlag = false;
 static bool mouseFlag = false;
+static bool mouseDown = false;
 
 ParticleSystem *particleSystem = new ParticleSystem();
 
@@ -72,7 +73,7 @@ void static addGravityForce(){
         particleSystem->addForce(gravity);
         gravityForceFlag = true;
     } else{
-        std::cout << "Added gravity forces"<< '\n';
+        std::cout << "Removed gravity forces"<< '\n';
         particleSystem->removeLastForce();
         gravityForceFlag = false;
     }
@@ -90,7 +91,7 @@ static void createHorizontalContraintCloth(){
 
 
     double distance = 0.1, springConstant = 0.1, dampingConstant = 0.5;
-    double distanceSpring = 0.25;
+
     // springforce particle with particle beneath it
     for(ii=0; ii<maxRow-1; ii++){
         for(jj=0; jj<maxCol; jj++){
@@ -137,19 +138,15 @@ static void createHorizontalContraintCloth(){
     Particle *p2 = new Particle(Vec2f(0.9f, 0.9f));
     SpringForce *sf1 = new SpringForce(p1, particleSystem->getParticles()[maxCol-1], distance, springConstant, dampingConstant);
     SpringForce *sf2 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol)-1], distance, springConstant, dampingConstant);
-    SpringForce *sf3 = new SpringForce(p1, particleSystem->getParticles()[0], distanceSpring, springConstant*2, dampingConstant);
-    SpringForce *sf4 = new SpringForce(p2, particleSystem->getParticles()[maxRow*(maxCol-1)], distanceSpring, springConstant*2, dampingConstant);
     particleSystem->addParticle(p1);
     particleSystem->addParticle(p2);
     particleSystem->addForce(sf1);
     particleSystem->addForce(sf2);
-    //particleSystem->addForce(sf4);
-    //particleSystem->addForce(sf3);
 
 
-    double radius = 0.005f;
-    const Vec2f allowedOffset(radius, 0.0);
+
     float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+    const Vec2f allowedOffset(circDistance, 0.0);
     auto c1 = new CircularWireConstraint(p1, p1->m_ConstructPos + allowedOffset, circDistance);
     auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
     particleSystem->addConstraint(c1);
@@ -216,9 +213,8 @@ static void createSpringCloth(){
     particleSystem->addForce(sf4);
     particleSystem->addForce(sf3);
 
-    double radius = 0.005f;
-    const Vec2f allowedOffset(radius, 0.0);
     float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+    const Vec2f allowedOffset(circDistance, 0.0);
     auto c1 = new CircularWireConstraint(p1, p1->m_ConstructPos + allowedOffset, circDistance);
     auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
     particleSystem->addConstraint(c1);
@@ -301,15 +297,13 @@ static void createCloth() {
 	particleSystem->addForce(sf4);
 	particleSystem->addForce(sf3);
 
-
-	double radius = 0.005f;
-	const Vec2f allowedOffset(radius, 0.0);
-	float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+    float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
+	const Vec2f allowedOffset(circDistance, 0.0);
 	auto c1 = new CircularWireConstraint(p1, p1->m_ConstructPos + allowedOffset, circDistance);
 	auto c2 = new CircularWireConstraint(p2, p2->m_ConstructPos + allowedOffset, circDistance);
 	particleSystem->addConstraint(c1);
 	particleSystem->addConstraint(c2);
-	
+
 }
 
 static void init_system(void)
@@ -414,24 +408,6 @@ static void draw_constraints ( void )
 relates mouse movements to particle toy construction
 ----------------------------------------------------------------------
 */
-/*
-static Particle* closestParticle(Vec2f pos){
-    int size = particleSystem->getParticles().size();
-    Particle* closestParticle = NULL;
-    float dist = 1000000.0;
-    for (int k = 0; k < size; ++k) {
-        Vec2f l = pos - particleSystem->getParticles()[k]->m_Position;
-        float normL = std::sqrt(std::abs(std::pow(l[0], 2)) + std::abs(std::pow(l[1], 2)));
-        if (normL < dist) {
-            dist = normL;
-            closestParticle = particleSystem->getParticles()[k];
-        }
-    }
-    if(dist > 1){
-        closestParticle = new Particle(pos);
-    }
-    return closestParticle;
-}*/
 
 static void get_from_UI ()
 {
@@ -462,15 +438,11 @@ static void get_from_UI ()
 
 	if( mouse_release[0] ) {
 
+
 	    if(mouseFlag) {
             const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
-            std::cout << "start=" << startPos[0] << "," << startPos[1] << '\n';
 
             const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
-            std::cout << "currentPos=" << currentPos[0] << "," << currentPos[1] << '\n';
-
-            //Particle* startClosestParticle = closestParticle(startPos);
-            //Particle* currentClosestParticle = closestParticle(currentPos);
 
             int size = particleSystem->getParticles().size();
             Particle *startClosestParticle = NULL;
@@ -613,51 +585,12 @@ static void mouse_func ( int button, int state, int x, int y )
 	omx = my = y;
 
 	if(!mouse_down[0]){
-        std::cout << "start" << '\n';
-        //std::cout << "hmy" << hmy << '\n';
 	    hmx=x; hmy=y;
-
-	    //current position
-        const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
-        std::cout << "pos!!!!!!! x=" << currentPos[0] <<" y=" << currentPos[1] << '\n';
-
-
-        //closest particle
-        int size = particleSystem->getParticles().size();
-        Particle* closestParticle = NULL;
-        float dist = 1000000.0;
-        for (int k = 0; k < size; ++k) {
-            Vec2f vec = currentPos - particleSystem->getParticles()[k]->m_Position;
-
-            float length = std::sqrt(std::abs(std::pow(vec[0], 2)) + std::abs(std::pow(vec[1], 2)));
-            if (length < dist) {
-                dist = length;
-                closestParticle = particleSystem->getParticles()[k];
-            }
-        }
-
-        Particle* p = new Particle(currentPos);
-        particleSystem->addParticle(p);
-
-        particleSystem->addForce(new SpringForce(closestParticle, p, 0.5, 1.5, 0.5));
-
-
-        double radius = 0.005f;
-        const Vec2f allowedOffset(radius, 0.0);
-        float circDistance = 0.05f;//sqrt(pow(1.0f/maxRow,2) + pow(1.0f/maxCol,2));
-        auto c1 = new CircularWireConstraint(p, p->m_ConstructPos + allowedOffset, circDistance);
-        particleSystem->addConstraint(c1);
+        mouseDown = true;
 	}
 	if(mouse_down[button]) {
-	    mouse_release[button] = state == GLUT_UP;
-        particleSystem->removeLastForce();
-        particleSystem->removeLastParticle();
-        particleSystem->removeLastConstraint();
-        //std::cout << "end" << '\n';
-        //std::cout << "hmy" << hmy <<'\n';
-
-        //std::cout << "omx" << omx <<'\n';
-
+        mouseDown = false;
+        mouse_release[button] = state == GLUT_UP;
 	}
 	if(mouse_down[button]) {
 	    mouse_shiftclick[button] = glutGetModifiers()==GLUT_ACTIVE_SHIFT;
@@ -683,11 +616,42 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
+    if(mouseDown) {
+        const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+
+        //closest particle
+        int size = particleSystem->getParticles().size();
+        Particle *closestParticle = NULL;
+        float dist = 1000000.0;
+        for (int k = 0; k < size; ++k) {
+            Vec2f vec = currentPos - particleSystem->getParticles()[k]->m_Position;
+
+            float length = std::sqrt(std::abs(std::pow(vec[0], 2)) + std::abs(std::pow(vec[1], 2)));
+            if (length < dist) {
+                dist = length;
+                closestParticle = particleSystem->getParticles()[k];
+            }
+        }
+        Particle *p = new Particle(currentPos);
+        p->m_ConstructPos = currentPos;
+        particleSystem->addParticle(p);
+
+        particleSystem->addForce(new SpringForce(closestParticle, p, 0.5, 0.4, 0.5));
+    }
+
+
 	if ( dsim ) simulation_step( particleSystem, dt, solverVersion );
 	else        {get_from_UI();remap_GUI();}
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
+
+	if(mouseDown) {
+        particleSystem->removeLastForce();
+        particleSystem->removeLastParticle();
+    }
+
+
 }
 
 static void display_func ( void )

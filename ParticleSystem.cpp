@@ -90,6 +90,11 @@ void ParticleSystem::applyConstraints() {
 	VectorXf q = VectorXf::Zero(vectorSize);
 	VectorXf Q = VectorXf::Zero(vectorSize);
 	MatrixXf W = MatrixXf::Zero(vectorSize, vectorSize);
+    MatrixXf J = MatrixXf::Zero(constraintsSize, vectorSize);
+    MatrixXf Jt = MatrixXf::Zero(vectorSize, constraintsSize);
+    MatrixXf Jder = MatrixXf::Zero(constraintsSize, vectorSize);
+    VectorXf C = VectorXf::Zero(constraintsSize);
+    VectorXf Cder = VectorXf::Zero(constraintsSize);
   
 	for (int i = 0; i < pVector.size(); i ++) {
 		Particle *p = pVector[i];
@@ -99,9 +104,6 @@ void ParticleSystem::applyConstraints() {
 			q[dimensions*i + d] = p->m_Velocity[d];
 		}
 	}
-
-	VectorXf C = VectorXf::Zero(constraintsSize);
-	VectorXf Cder = VectorXf::Zero(constraintsSize);
 
 	for (int i = 0; i < constraintsSize; i++) {
 		Constraint *c = cVector[i];
@@ -126,10 +128,6 @@ void ParticleSystem::applyConstraints() {
         else {
             std::cout << "Couldnt cast constraint";
         }
-
-	    MatrixXf J = MatrixXf::Zero(constraintsSize, vectorSize);
-	    MatrixXf Jt = MatrixXf::Zero(vectorSize, constraintsSize);
-        MatrixXf Jder = MatrixXf::Zero(constraintsSize, vectorSize);
 		
         for (int k = 0; k < currentParticles.size(); k++) {
 			int currentPos = getPosition(currentParticles[k]);

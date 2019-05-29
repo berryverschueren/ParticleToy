@@ -29,20 +29,4 @@ void AngularSpringForce::apply(){
 
     float C = std::acos(dotProduct)-m_alpha;
 
-    /*Vec2f l = m_p1->m_Position - m_p2->m_Position;
-    Vec2f vi1 = m_p1->m_Velocity - m_p2->m_Velocity;
-    Vec2f vi1 = m_p1->m_Velocity - m_p2->m_Velocity;
-
-    float lengthL = std::sqrt(std::abs(std::pow(l[0],2))+std::abs(std::pow(l[1],2)));
-    float dot = i[0]*l[0]+i[1]*l[1];
-
-    Vec2f f1 = -(m_ks*(lengthL-m_dist)+m_kd*(dot/lengthL))*(l/lengthL);
-    Vec2f f2 = -f1;
-
-    m_p1->m_Force += f1;
-    m_p2->m_Force += f2;
-*/
-    //m_p1->m_Force +=
-
-
 }
