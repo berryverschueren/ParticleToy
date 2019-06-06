@@ -37,7 +37,7 @@ static bool mouseFlag = false;
 static bool mouseDown = false;
 
 ParticleSystem *particleSystem = new ParticleSystem();
-FluidSystem *fluidSystem = new FluidSystem();
+FluidSystem *fluidSystem = new FluidSystem(64, 0.1f, 0.0f, 0.0f, 5.0f, 100.0f, 0);
 
 static int win_id;
 static int win_x, win_y;
@@ -318,7 +318,8 @@ static void init_system(void)
 
 	// createCloth();
 
-    fluidSystem->init(64, 0.1f, 0.0f, 0.0f, 5.0f, 100.0f, 0);
+    fluidSystem = new FluidSystem(64, 0.1f, 0.2f, 0.2f, 5.0f, 100.0f, 0); 
+    //init(64, 0.1f, 0.0f, 0.0f, 5.0f, 100.0f, 0);
     fluidSystem->allocate_data();
     fluidSystem->clear_data();
 }
@@ -496,31 +497,29 @@ relates mouse movements to particle toy construction
 // 	omx = mx;
 // 	omy = my;
 // }
-static void get_from_UI ( float * d, float * u, float * v )
+static void get_from_UI()
 {
-    int N = fluidSystem->N;
-    float force = fluidSystem->force;
-    float source = fluidSystem->source;
-	int i, j, size = (N+2)*(N+2);
+	int i, j, size = (fluidSystem->N+2)*(fluidSystem->N+2);
 
 	for ( i=0 ; i<size ; i++ ) {
-		u[i] = v[i] = d[i] = 0.0f;
+		fluidSystem->uForcesPrev[i] = fluidSystem->vForcesPrev[i] = fluidSystem->densitiesPrev[i] = 0.0f;
 	}
 
 	if ( !mouse_down[0] && !mouse_down[2] ) return;
 
-	i = (int)((       mx /(float)win_x)*N+1);
-	j = (int)(((win_y-my)/(float)win_y)*N+1);
+	i = (int)((       mx /(float)win_x)*fluidSystem->N+1);
+	j = (int)(((win_y-my)/(float)win_y)*fluidSystem->N+1);
 
-	if ( i<1 || i>N || j<1 || j>N ) return;
+	if ( i<1 || i>fluidSystem->N || j<1 || j>fluidSystem->N ) return;
 
 	if ( mouse_down[0] ) {
-		u[((i)+(N+2)*(j))] = force * (mx-omx);
-		v[((i)+(N+2)*(j))] = force * (omy-my);
+		fluidSystem->uForcesPrev[((i)+(fluidSystem->N+2)*(j))] = fluidSystem->force * (mx-omx);
+		fluidSystem->vForcesPrev[((i)+(fluidSystem->N+2)*(j))] = fluidSystem->force * (omy-my);
 	}
 
 	if ( mouse_down[2] ) {
-		d[((i)+(N+2)*(j))] = source;
+        //printf("\t md2, %d || %d || %f \n", ((i)+(fluidSystem->N+2)*(j)), fluidSystem->densitiesPrev.size(), fluidSystem->source);
+		fluidSystem->densitiesPrev[((i)+(fluidSystem->N+2)*(j))] = fluidSystem->source;
 	}
 
 	omx = mx;
@@ -727,7 +726,7 @@ static void key_func ( unsigned char key, int x, int y )
 
 		case 'v':
 		case 'V':
-			dvel = !dvel;
+			fluidSystem->dvel = !fluidSystem->dvel;
 			break;
 	}
 }
@@ -757,9 +756,9 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-	get_from_UI(fluidSystem->densitiesPrev, fluidSystem->uForcesPrev, fluidSystem->vForcesPrev);
-    fluidSystem->velocity_step(fluidSystem->uForces, fluidSystem->vForces, fluidSystem->uForcesPrev, fluidSystem->vForcesPrev);
-    fluidSystem->density_step(fluidSystem->densities, fluidSystem->densitiesPrev, fluidSystem->uForces, fluidSystem->vForces);
+	get_from_UI();
+    fluidSystem->velocity_step();
+    fluidSystem->density_step();
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
@@ -769,7 +768,7 @@ static void display_func ( void )
 {
 	pre_display ();
 
-		if ( dvel ) fluidSystem->draw_velocity();
+		if ( fluidSystem->dvel ) fluidSystem->draw_velocity();
 		else		fluidSystem->draw_density();
 
 	post_display ();
@@ -848,7 +847,6 @@ int main ( int argc, char ** argv )
 	frame_number = 0;
 	
 	init_system();
-	
 	win_x = 512;
 	win_y = 512;
 	open_glut_window ();

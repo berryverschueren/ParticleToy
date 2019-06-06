@@ -7,25 +7,23 @@
 #include <stdio.h>
 #include <GL/glut.h>
 
-FluidSystem::FluidSystem() {};
-
-void FluidSystem::init(int N, float dt, float diff, float visc, float force, float source, int dvel) {
-    this->N = N;
-    this->dt = dt;
-    this->diff = diff;
-    this->visc = visc;
-    this->force = force;
-    this->source = source;
-    this->dvel = dvel;
-}
+FluidSystem::FluidSystem(int _N, float _dt, float _diff, float _visc, float _force, float _source, int _dvel) {
+    this->N = _N;
+    this->dt = _dt;
+    this->diff = _diff;
+    this->visc = _visc;
+    this->force = _force;
+    this->source = _source;
+    this->dvel = _dvel;
+};
 
 void FluidSystem::free_data() {
-    if (uForces) free(uForces);
-    if (vForces) free(vForces);
-    if (uForcesPrev) free(uForcesPrev);
-    if (vForcesPrev) free(vForcesPrev);
-    if (densities) free(densities);
-    if (densitiesPrev) free(densitiesPrev);
+    uForces.clear();
+    vForces.clear();
+    uForcesPrev.clear();
+    vForcesPrev.clear();
+    densities.clear();
+    densitiesPrev.clear();
 }
 
 void FluidSystem::clear_data() {
@@ -62,7 +60,7 @@ void FluidSystem::draw_velocity() {
 				y = (j-0.5f)*h;
 
 				glVertex2f ( x, y );
-				glVertex2f ( x+u[((i)+(N+2)*(j))], y+v[((i)+(N+2)*(j))] );
+				glVertex2f ( x+uForces[((i)+(N+2)*(j))], y+vForces[((i)+(N+2)*(j))] );
 			}
 		}
 
@@ -81,10 +79,10 @@ void FluidSystem::draw_density() {
 			for ( j=0 ; j<=N ; j++ ) {
 				y = (j-0.5f)*h;
 
-				d00 = dens[((i)+(N+2)*(j))];
-				d01 = dens[((i)+(N+2)*(j+1))];
-				d10 = dens[((i+1)+(N+2)*(j))];
-				d11 = dens[((i+1)+(N+2)*(j+1))];
+				d00 = densities[((i)+(N+2)*(j))];
+				d01 = densities[((i)+(N+2)*(j+1))];
+				d10 = densities[((i+1)+(N+2)*(j))];
+				d11 = densities[((i+1)+(N+2)*(j+1))];
 
 				glColor3f ( d00, d00, d00 ); glVertex2f ( x, y );
 				glColor3f ( d10, d10, d10 ); glVertex2f ( x+h, y );
@@ -96,14 +94,14 @@ void FluidSystem::draw_density() {
 	glEnd ();
 }
 
-void FluidSystem::add_source(std::vector<float> x, std::vector<float> s) {
+void FluidSystem::add_source(std::vector<float> &x, std::vector<float> &s) {
     int i, size = (N+2) * (N+2);
     for (i = 0; i < size; i++) {
         x[i] += dt * s[i];
     }
 }
 
-void FluidSystem::linear_solve(int b, std::vector<float> x, std::vector<float> x0, float a, float c) {
+void FluidSystem::linear_solve(int b, std::vector<float> &x, std::vector<float> &x0, float a, float c) {
     int i,j,k;
     for (k = 0; k < 20; k++) {
         for (i = 1; i <= N; i++ ) { 
@@ -115,12 +113,12 @@ void FluidSystem::linear_solve(int b, std::vector<float> x, std::vector<float> x
     }    
 }
 
-void FluidSystem::diffuse(int b, std::vector<float> x, std::vector<float> x0) {
+void FluidSystem::diffuse(int b, std::vector<float> &x, std::vector<float> &x0) {
     float a = dt * diff * N * N;
     linear_solve(b, x, x0, a, (1 + 4 * a));
 }
 
-void FluidSystem::advect(int b, std::vector<float> d, std::vector<float> d0, std::vector<float> u, std::vector<float> v) {
+void FluidSystem::advect(int b, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &u, std::vector<float> &v) {
     int i, j, i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
     dt0 = dt * N;
@@ -136,20 +134,22 @@ void FluidSystem::advect(int b, std::vector<float> d, std::vector<float> d0, std
             
             if (x > N + 0.5f) {
                 x = N + 0.5f; 
-                i0 = (int)x; 
-                i1 = i0 + 1;
             }
+            
+            i0 = (int)x; 
+            i1 = i0 + 1;
             
             if (y < 0.5f) {
                 y = 0.5f;
             } 
             
             if (y > N + 0.5f) {
-                y = N + 0.5f; 
-                j0 = (int)y; 
-                j1 = j0 + 1;
+                y = N + 0.5f;
             }
-            
+             
+            j0 = (int)y; 
+            j1 = j0 + 1;
+
             s1 = x - i0; 
             s0 = 1 - s1; 
             t1 = y - j0; 
@@ -161,10 +161,11 @@ void FluidSystem::advect(int b, std::vector<float> d, std::vector<float> d0, std
                 + t1 * d0[((i1)+(N+2)*(j1))]);
         }
     }
+
     set_boundary(b, d);
 }
 
-void FluidSystem::project(std::vector<float> u, std::vector<float> v, std::vector<float> p, std::vector<float> div) {
+void FluidSystem::project(std::vector<float> &u, std::vector<float> &v, std::vector<float> &p, std::vector<float> &div) {
     int i,j;
 
     for (i = 1; i <= N; i++ ) { 
@@ -189,42 +190,30 @@ void FluidSystem::project(std::vector<float> u, std::vector<float> v, std::vecto
     set_boundary(2, v);
 }
 
-void FluidSystem::density_step(std::vector<float> x, std::vector<float> x0, std::vector<float> u, std::vector<float> v) {
-    add_source(x, x0);
-    std::vector<float> tmp = x0;
-    x0 = x;
-    x = tmp;
-    diffuse(0, x, x0);
-    tmp = x0;
-    x0 = x;
-    x = tmp;
-    advect(0, x, x0, u, v);
+void FluidSystem::density_step() {
+    add_source(densities, densitiesPrev);
+    densitiesPrev.swap(densities);
+    diffuse(0, densities, densitiesPrev);
+    densitiesPrev.swap(densities);
+    advect(0, densities, densitiesPrev, uForces, vForces);
 }
 
-void FluidSystem::velocity_step(std::vector<float> u, std::vector<float> v, std::vector<float> u0, std::vector<float> v0) {
-    add_source(u, u0);
-    add_source(v, v0);
-    std::vector<float> tmp = u0;
-    u0 = u;
-    u = tmp;
-    diffuse(1, u, u0);
-    std::vector<float> tmp = v0;
-    v0 = v;
-    v = tmp;
-    diffuse(2, v, v0);
-    project(u, v, u0, v0);
-    std::vector<float> tmp = u0;
-    u0 = u;
-    u = tmp;
-    std::vector<float> tmp = v0;
-    v0 = v;
-    v = tmp;
-    advect(1, u, u0, u0, v0);
-    advect(2, v, v0, u0, v0);
-    project(u, v, u0, v0);
+void FluidSystem::velocity_step() {
+    add_source(uForces, uForcesPrev);
+    add_source(vForces, vForcesPrev);
+    uForcesPrev.swap(uForces);
+    diffuse(1, uForces, uForcesPrev);
+    vForcesPrev.swap(vForces);
+    diffuse(2, vForces, vForcesPrev);
+    project(uForces, vForces, uForcesPrev, vForcesPrev);
+    uForcesPrev.swap(uForces);
+    vForcesPrev.swap(vForces);
+    advect(1, uForces, uForcesPrev, uForcesPrev, vForcesPrev);
+    advect(2, vForces, vForcesPrev, uForcesPrev, vForcesPrev);
+    project(uForces, vForces, uForcesPrev, vForcesPrev);
 }
 
-void FluidSystem::set_boundary(int b, std::vector<float> x) {
+void FluidSystem::set_boundary(int b, std::vector<float> &x) {
     int i;
     for (i = 0; i <= N; i++) {
         x[((0)+(N+2)*(i))] = b==1 ? -x[((1)+(N+2)*(i))] : x[((1)+(N+2)*(i))];
