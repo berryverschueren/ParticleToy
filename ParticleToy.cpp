@@ -10,6 +10,7 @@
 #include "CircularWireConstraint.h"
 #include "imageio.h"
 #include "ParticleSystem.h"
+#include "FluidSystem.h"
 
 #include <vector>
 #include <stdlib.h>
@@ -36,6 +37,7 @@ static bool mouseFlag = false;
 static bool mouseDown = false;
 
 ParticleSystem *particleSystem = new ParticleSystem();
+FluidSystem *fluidSystem = new FluidSystem();
 
 static int win_id;
 static int win_x, win_y;
@@ -308,13 +310,17 @@ static void createCloth() {
 
 static void init_system(void)
 {
-	solverVersion = 3;
+	// solverVersion = 3;
 
-	const double dist = 0.2;
-	const Vec2f center(0.0, 0.0);
-	const Vec2f offset(dist, 0.0);
+	// const double dist = 0.2;
+	// const Vec2f center(0.0, 0.0);
+	// const Vec2f offset(dist, 0.0);
 
-	createCloth();
+	// createCloth();
+
+    fluidSystem->init(64, 0.1f, 0.0f, 0.0f, 5.0f, 100.0f, 0);
+    fluidSystem->allocate_data();
+    fluidSystem->clear_data();
 }
 
 
@@ -341,38 +347,45 @@ OpenGL specific drawing routines
 
 static void pre_display ( void )
 {
+	// glViewport ( 0, 0, win_x, win_y );
+	// glMatrixMode ( GL_PROJECTION );
+	// glLoadIdentity ();
+	// gluOrtho2D ( -1.0, 1.0, -1.0, 1.0 );
+	// glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
+	// glClear ( GL_COLOR_BUFFER_BIT );
 	glViewport ( 0, 0, win_x, win_y );
 	glMatrixMode ( GL_PROJECTION );
 	glLoadIdentity ();
-	gluOrtho2D ( -1.0, 1.0, -1.0, 1.0 );
+	gluOrtho2D ( 0.0, 1.0, 0.0, 1.0 );
 	glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
 	glClear ( GL_COLOR_BUFFER_BIT );
 }
 
 static void post_display ( void )
 {
-	// Write frames if necessary.
-	if (dump_frames) {
-		const int FRAME_INTERVAL = 4;
-		if ((frame_number % FRAME_INTERVAL) == 0) {
-			const unsigned int w = glutGet(GLUT_WINDOW_WIDTH);
-			const unsigned int h = glutGet(GLUT_WINDOW_HEIGHT);
-			unsigned char * buffer = (unsigned char *) malloc(w * h * 4 * sizeof(unsigned char));
-			if (!buffer)
-				exit(-1);
-			// glRasterPos2i(0, 0);
-			glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-			static char filename[80];
-			sprintf(filename, "../snapshots/img%.5i.png", frame_number / FRAME_INTERVAL);
-			printf("Dumped %s.\n", filename);
-			saveImageRGBA(filename, buffer, w, h);
+	// // Write frames if necessary.
+	// if (dump_frames) {
+	// 	const int FRAME_INTERVAL = 4;
+	// 	if ((frame_number % FRAME_INTERVAL) == 0) {
+	// 		const unsigned int w = glutGet(GLUT_WINDOW_WIDTH);
+	// 		const unsigned int h = glutGet(GLUT_WINDOW_HEIGHT);
+	// 		unsigned char * buffer = (unsigned char *) malloc(w * h * 4 * sizeof(unsigned char));
+	// 		if (!buffer)
+	// 			exit(-1);
+	// 		// glRasterPos2i(0, 0);
+	// 		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	// 		static char filename[80];
+	// 		sprintf(filename, "../snapshots/img%.5i.png", frame_number / FRAME_INTERVAL);
+	// 		printf("Dumped %s.\n", filename);
+	// 		saveImageRGBA(filename, buffer, w, h);
 			
-			free(buffer);
-		}
-	}
-	frame_number++;
+	// 		free(buffer);
+	// 	}
+	// }
+	// frame_number++;
 	
-	glutSwapBuffers ();
+	// glutSwapBuffers ();
+    glutSwapBuffers ();
 }
 
 static void draw_particles ( void )
@@ -409,79 +422,111 @@ relates mouse movements to particle toy construction
 ----------------------------------------------------------------------
 */
 
-static void get_from_UI ()
-{
-	int i, j;
-	// int size, flag;
-	int hi, hj;
-	// float x, y;
-	if ( !mouse_down[0] && !mouse_down[2] && !mouse_release[0] 
-	&& !mouse_shiftclick[0] && !mouse_shiftclick[2] ) return;
+// static void get_from_UI ()
+// {
+// 	int i, j;
+// 	// int size, flag;
+// 	int hi, hj;
+// 	// float x, y;
+// 	if ( !mouse_down[0] && !mouse_down[2] && !mouse_release[0] 
+// 	&& !mouse_shiftclick[0] && !mouse_shiftclick[2] ) return;
 
-	i = (int)((       mx /(float)win_x)*N);
-	j = (int)(((win_y-my)/(float)win_y)*N);
+// 	i = (int)((       mx /(float)win_x)*N);
+// 	j = (int)(((win_y-my)/(float)win_y)*N);
+
+// 	if ( i<1 || i>N || j<1 || j>N ) return;
+
+// 	//left mouse click
+//     if ( mouse_down[0] ) {
+
+//     }
+//     //right mouse click
+//     if ( mouse_down[2] ) {
+
+//     }
+
+//     //start pos
+// 	hi = (int)((       hmx /(float)win_x)*N);
+// 	hj = (int)(((win_y-hmy)/(float)win_y)*N);
+
+// 	if( mouse_release[0] ) {
+
+
+// 	    if(mouseFlag) {
+//             const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
+
+//             const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+
+//             int size = particleSystem->getParticles().size();
+//             Particle *startClosestParticle = NULL;
+//             Particle *currentClosestParticle = NULL;
+//             float sDist = 1000000.0;
+//             float cDist = 1000000.0;
+//             for (int k = 0; k < size; ++k) {
+//                 Vec2f sV = startPos - particleSystem->getParticles()[k]->m_Position;
+//                 Vec2f cV = currentPos - particleSystem->getParticles()[k]->m_Position;
+
+//                 float sL = std::sqrt(std::abs(std::pow(sV[0], 2)) + std::abs(std::pow(sV[1], 2)));
+//                 float cL = std::sqrt(std::abs(std::pow(cV[0], 2)) + std::abs(std::pow(cV[1], 2)));
+//                 if (sL < sDist) {
+//                     sDist = sL;
+//                     startClosestParticle = particleSystem->getParticles()[k];
+//                 }
+//                 if (cL < cDist) {
+//                     cDist = cL;
+//                     currentClosestParticle = particleSystem->getParticles()[k];
+//                 }
+//             }
+//             if (sDist > 0.1) {
+//                 startClosestParticle = new Particle(startPos);
+//                 particleSystem->addParticle(startClosestParticle);
+//             }
+//             if (cDist > 0.1) {
+//                 currentClosestParticle = new Particle(currentPos);
+//                 particleSystem->addParticle(currentClosestParticle);
+//             }
+
+//             //Particle* p = new Particle(startPos);
+//             particleSystem->addForce(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
+//             mouse_release[0] = 0;
+//         }
+
+// 	}
+
+// 	omx = mx;
+// 	omy = my;
+// }
+static void get_from_UI ( float * d, float * u, float * v )
+{
+    int N = fluidSystem->N;
+    float force = fluidSystem->force;
+    float source = fluidSystem->source;
+	int i, j, size = (N+2)*(N+2);
+
+	for ( i=0 ; i<size ; i++ ) {
+		u[i] = v[i] = d[i] = 0.0f;
+	}
+
+	if ( !mouse_down[0] && !mouse_down[2] ) return;
+
+	i = (int)((       mx /(float)win_x)*N+1);
+	j = (int)(((win_y-my)/(float)win_y)*N+1);
 
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
-	//left mouse click
-    if ( mouse_down[0] ) {
+	if ( mouse_down[0] ) {
+		u[((i)+(N+2)*(j))] = force * (mx-omx);
+		v[((i)+(N+2)*(j))] = force * (omy-my);
+	}
 
-    }
-    //right mouse click
-    if ( mouse_down[2] ) {
-
-    }
-
-    //start pos
-	hi = (int)((       hmx /(float)win_x)*N);
-	hj = (int)(((win_y-hmy)/(float)win_y)*N);
-
-	if( mouse_release[0] ) {
-
-
-	    if(mouseFlag) {
-            const Vec2f startPos((hi / (N / 2.0)) - 1.0, ((hj / (N / 2.0)) - 1.0));
-
-            const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
-
-            int size = particleSystem->getParticles().size();
-            Particle *startClosestParticle = NULL;
-            Particle *currentClosestParticle = NULL;
-            float sDist = 1000000.0;
-            float cDist = 1000000.0;
-            for (int k = 0; k < size; ++k) {
-                Vec2f sV = startPos - particleSystem->getParticles()[k]->m_Position;
-                Vec2f cV = currentPos - particleSystem->getParticles()[k]->m_Position;
-
-                float sL = std::sqrt(std::abs(std::pow(sV[0], 2)) + std::abs(std::pow(sV[1], 2)));
-                float cL = std::sqrt(std::abs(std::pow(cV[0], 2)) + std::abs(std::pow(cV[1], 2)));
-                if (sL < sDist) {
-                    sDist = sL;
-                    startClosestParticle = particleSystem->getParticles()[k];
-                }
-                if (cL < cDist) {
-                    cDist = cL;
-                    currentClosestParticle = particleSystem->getParticles()[k];
-                }
-            }
-            if (sDist > 0.1) {
-                startClosestParticle = new Particle(startPos);
-                particleSystem->addParticle(startClosestParticle);
-            }
-            if (cDist > 0.1) {
-                currentClosestParticle = new Particle(currentPos);
-                particleSystem->addParticle(currentClosestParticle);
-            }
-
-            //Particle* p = new Particle(startPos);
-            particleSystem->addForce(new SpringForce(startClosestParticle, currentClosestParticle, 1, 0.05, 0.5));
-            mouse_release[0] = 0;
-        }
-
+	if ( mouse_down[2] ) {
+		d[((i)+(N+2)*(j))] = source;
 	}
 
 	omx = mx;
 	omy = my;
+
+	return;
 }
 
 static void remap_GUI()
@@ -501,82 +546,190 @@ GLUT callback routines
 ----------------------------------------------------------------------
 */
 
+// static void key_func ( unsigned char key, int x, int y )
+// {
+// 	switch ( key )
+// 	{
+// 	case 'c':
+// 	case 'C':
+// 		clear_data ();
+// 		break;
+
+// 	case 'd':
+// 	case 'D':
+// 		dump_frames = !dump_frames;
+// 		break;
+
+// 	case 'q':
+// 	case 'Q':
+// 		free_data ();
+// 		exit ( 0 );
+// 		break;
+
+// 	case 'm':
+//     case 'M':
+//         if(mouseFlag){
+//             mouseFlag = false;
+//         }else{
+//             mouseFlag = true;
+//         }
+//         break;
+// 	case '0':
+// 		solverVersion = 0;
+// 		break;
+// 	case '1':
+// 		solverVersion = 1;
+// 		break;
+// 	case '2':
+// 		solverVersion = 2;
+// 		break;
+// 	case '3':
+// 		solverVersion = 3;
+// 		break;
+
+// 	case 'g':
+//     case 'G':
+//         addGravityForce();
+//         break;
+//     case 'h':
+//     case 'H':
+//         addHorizontalForce();
+//         break;
+//     case 'j':
+//     case 'J':
+//         particleSystem->deleteAll();
+
+//         gravityForceFlag = false;
+//         windForceFlag = false;
+//         createSpringCloth();
+//         break;
+//     case 'k':
+//     case 'K':
+//         particleSystem->deleteAll();
+//         gravityForceFlag = false;
+//         windForceFlag = false;
+//         createCloth();
+//         break;
+//     case 'l':
+//     case 'L':
+//         particleSystem->deleteAll();
+//         gravityForceFlag = false;
+//         windForceFlag = false;
+//         createHorizontalContraintCloth();
+//         break;
+// 	case ' ':
+// 		dsim = !dsim;
+// 		break;
+// 	}
+// 	printf("\n Solverversion set to: %u \n", solverVersion);
+// }
+
+// static void mouse_func ( int button, int state, int x, int y )
+// {
+// 	omx = mx = x;
+// 	omx = my = y;
+
+// 	if(!mouse_down[0]){
+// 	    hmx=x; hmy=y;
+//         mouseDown = true;
+// 	}
+// 	if(mouse_down[button]) {
+//         mouseDown = false;
+//         mouse_release[button] = state == GLUT_UP;
+// 	}
+// 	if(mouse_down[button]) {
+// 	    mouse_shiftclick[button] = glutGetModifiers()==GLUT_ACTIVE_SHIFT;
+
+// 	}
+// 	mouse_down[button] = state == GLUT_DOWN;
+// }
+
+// static void motion_func ( int x, int y )
+// {
+// 	mx = x;
+// 	my = y;
+// }
+
+// static void reshape_func ( int width, int height )
+// {
+// 	glutSetWindow ( win_id );
+// 	glutReshapeWindow ( width, height );
+
+// 	win_x = width;
+// 	win_y = height;
+// }
+
+// static void idle_func ( void )
+// {
+//     if(mouseDown) {
+//         const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
+
+//         //closest particle
+//         int size = particleSystem->getParticles().size();
+//         Particle *closestParticle = NULL;
+//         float dist = 1000000.0;
+//         for (int k = 0; k < size; ++k) {
+//             Vec2f vec = currentPos - particleSystem->getParticles()[k]->m_Position;
+
+//             float length = std::sqrt(std::abs(std::pow(vec[0], 2)) + std::abs(std::pow(vec[1], 2)));
+//             if (length < dist) {
+//                 dist = length;
+//                 closestParticle = particleSystem->getParticles()[k];
+//             }
+//         }
+//         Particle *p = new Particle(currentPos);
+//         p->m_ConstructPos = currentPos;
+//         particleSystem->addParticle(p);
+
+//         particleSystem->addForce(new SpringForce(closestParticle, p, 0.5, 0.4, 0.5));
+//     }
+
+
+// 	if ( dsim ) simulation_step( particleSystem, dt, solverVersion );
+// 	else        {get_from_UI();remap_GUI();}
+
+// 	glutSetWindow ( win_id );
+// 	glutPostRedisplay ();
+
+// 	if(mouseDown) {
+//         particleSystem->removeLastForce();
+//         particleSystem->removeLastParticle();
+//     }
+
+
+// }
+
+// static void display_func ( void )
+// {
+// 	pre_display ();
+
+// 	draw_forces();
+// 	draw_constraints();
+// 	draw_particles();
+
+// 	post_display ();
+// }
+
 static void key_func ( unsigned char key, int x, int y )
 {
 	switch ( key )
 	{
-	case 'c':
-	case 'C':
-		clear_data ();
-		break;
+		case 'c':
+		case 'C':
+			clear_data ();
+			break;
 
-	case 'd':
-	case 'D':
-		dump_frames = !dump_frames;
-		break;
+		case 'q':
+		case 'Q':
+			free_data ();
+			exit ( 0 );
+			break;
 
-	case 'q':
-	case 'Q':
-		free_data ();
-		exit ( 0 );
-		break;
-
-	case 'm':
-    case 'M':
-        if(mouseFlag){
-            mouseFlag = false;
-        }else{
-            mouseFlag = true;
-        }
-        break;
-	case '0':
-		solverVersion = 0;
-		break;
-	case '1':
-		solverVersion = 1;
-		break;
-	case '2':
-		solverVersion = 2;
-		break;
-	case '3':
-		solverVersion = 3;
-		break;
-
-	case 'g':
-    case 'G':
-        addGravityForce();
-        break;
-    case 'h':
-    case 'H':
-        addHorizontalForce();
-        break;
-    case 'j':
-    case 'J':
-        particleSystem->deleteAll();
-
-        gravityForceFlag = false;
-        windForceFlag = false;
-        createSpringCloth();
-        break;
-    case 'k':
-    case 'K':
-        particleSystem->deleteAll();
-        gravityForceFlag = false;
-        windForceFlag = false;
-        createCloth();
-        break;
-    case 'l':
-    case 'L':
-        particleSystem->deleteAll();
-        gravityForceFlag = false;
-        windForceFlag = false;
-        createHorizontalContraintCloth();
-        break;
-	case ' ':
-		dsim = !dsim;
-		break;
+		case 'v':
+		case 'V':
+			dvel = !dvel;
+			break;
 	}
-	printf("\n Solverversion set to: %u \n", solverVersion);
 }
 
 static void mouse_func ( int button, int state, int x, int y )
@@ -584,18 +737,6 @@ static void mouse_func ( int button, int state, int x, int y )
 	omx = mx = x;
 	omx = my = y;
 
-	if(!mouse_down[0]){
-	    hmx=x; hmy=y;
-        mouseDown = true;
-	}
-	if(mouse_down[button]) {
-        mouseDown = false;
-        mouse_release[button] = state == GLUT_UP;
-	}
-	if(mouse_down[button]) {
-	    mouse_shiftclick[button] = glutGetModifiers()==GLUT_ACTIVE_SHIFT;
-
-	}
 	mouse_down[button] = state == GLUT_DOWN;
 }
 
@@ -616,51 +757,20 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-    if(mouseDown) {
-        const Vec2f currentPos((mx / (win_x / 2.0)) - 1.0, -((my / (win_y / 2.0)) - 1.0));
-
-        //closest particle
-        int size = particleSystem->getParticles().size();
-        Particle *closestParticle = NULL;
-        float dist = 1000000.0;
-        for (int k = 0; k < size; ++k) {
-            Vec2f vec = currentPos - particleSystem->getParticles()[k]->m_Position;
-
-            float length = std::sqrt(std::abs(std::pow(vec[0], 2)) + std::abs(std::pow(vec[1], 2)));
-            if (length < dist) {
-                dist = length;
-                closestParticle = particleSystem->getParticles()[k];
-            }
-        }
-        Particle *p = new Particle(currentPos);
-        p->m_ConstructPos = currentPos;
-        particleSystem->addParticle(p);
-
-        particleSystem->addForce(new SpringForce(closestParticle, p, 0.5, 0.4, 0.5));
-    }
-
-
-	if ( dsim ) simulation_step( particleSystem, dt, solverVersion );
-	else        {get_from_UI();remap_GUI();}
+	get_from_UI(fluidSystem->densitiesPrev, fluidSystem->uForcesPrev, fluidSystem->vForcesPrev);
+    fluidSystem->velocity_step(fluidSystem->uForces, fluidSystem->vForces, fluidSystem->uForcesPrev, fluidSystem->vForcesPrev);
+    fluidSystem->density_step(fluidSystem->densities, fluidSystem->densitiesPrev, fluidSystem->uForces, fluidSystem->vForces);
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
-
-	if(mouseDown) {
-        particleSystem->removeLastForce();
-        particleSystem->removeLastParticle();
-    }
-
-
 }
 
 static void display_func ( void )
 {
 	pre_display ();
 
-	draw_forces();
-	draw_constraints();
-	draw_particles();
+		if ( dvel ) fluidSystem->draw_velocity();
+		else		fluidSystem->draw_density();
 
 	post_display ();
 }
