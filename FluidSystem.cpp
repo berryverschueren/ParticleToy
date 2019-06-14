@@ -3,6 +3,8 @@
 #define FOR_EACH_CELL for ( i=1 ; i<=N ; i++ ) { for ( j=1 ; j<=N ; j++ ) { // loop over entire grid
 #define END_FOR }}
 
+#include <math.h>
+
 // add density sources to the grid based on user interaction
 // s is an array containing the density values for specific cells
 void add_source ( int N, float * x, float * s, float dt )
@@ -106,6 +108,21 @@ void project ( int N, float * u, float * v, float * p, float * div )
 	set_bnd ( N, 1, u ); set_bnd ( N, 2, v );
 }
 
+// h and epsilon are constants control spatial discretion and small scale detail
+void vorticity_force ( int N, float * u, float * v, float dt, double eps, double h )
+{
+    //double h = 1.;
+    //double eps = 1.;
+    int i,j;
+    FOR_EACH_CELL
+            // calculate force for current position and velocity
+            float f = eps * h * pow(2, 0.5) * ( v[IX(i,j)] - u[IX(i,j)] );
+            // get current velocity += dt * force
+            u[IX(i,j)] += dt * f;
+            v[IX(i,j)] += dt * -f;
+    END_FOR
+}
+
 void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt )
 {
 	// source density initially contained in the array x0
@@ -114,11 +131,11 @@ void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff,
 	SWAP ( x0, x ); advect ( N, 0, x, x0, u, v, dt ); // advect
 }
 
-void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt )
+void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, double eps, double h )
 {
 	// add forces stored in the arrays u0 and v0 re-using the add_source function
 	add_source ( N, u, u0, dt ); add_source ( N, v, v0, dt );
-	// 
+	vorticity_force( N, u, v, dt, eps, h); // vorticity force added to u and v
 	SWAP ( u0, u ); diffuse ( N, 1, u, u0, visc, dt );
 	SWAP ( v0, v ); diffuse ( N, 2, v, v0, visc, dt );
 	project ( N, u, v, u0, v0 ); // conserve mass (1st time)
@@ -126,4 +143,5 @@ void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
 	advect ( N, 1, u, u0, u0, v0, dt ); advect ( N, 2, v, v0, u0, v0, dt ); // more accurate advection because of project
 	project ( N, u, v, u0, v0 ); // conserve mass (2nd time)
 }
+
 

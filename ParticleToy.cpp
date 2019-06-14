@@ -25,7 +25,7 @@
 
 #define IX(i,j) ((i)+(N+2)*(j))
 extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt );
-extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt );
+extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, double eps, double h );
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
@@ -35,6 +35,8 @@ static int win_id;
 static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
+
+static double h, eps;
 
 /*
   ----------------------------------------------------------------------
@@ -247,7 +249,7 @@ static void reshape_func ( int width, int height )
 static void idle_func ( void )
 {
 	get_from_UI ( dens_prev, u_prev, v_prev );
-	vel_step ( N, u, v, u_prev, v_prev, visc, dt );
+	vel_step ( N, u, v, u_prev, v_prev, visc, dt, eps, h );
 	dens_step ( N, dens, dens_prev, u, v, diff, dt );
 
 	glutSetWindow ( win_id );
@@ -305,19 +307,21 @@ static void open_glut_window ( void )
 int main ( int argc, char ** argv )
 {
 	glutInit ( &argc, argv );
-
-	if ( argc != 1 && argc != 6 ) {
-		fprintf ( stderr, "usage : %s N dt diff visc force source\n", argv[0] );
+/*
+	if ( argc != 1 && argc != 8 ) {
+		fprintf ( stderr, "usage : %s N dt diff visc force source epsilon h\n", argv[0] );
 		fprintf ( stderr, "where:\n" );\
-		fprintf ( stderr, "\t N      : grid resolution\n" );
-		fprintf ( stderr, "\t dt     : time step\n" );
-		fprintf ( stderr, "\t diff   : diffusion rate of the density\n" );
-		fprintf ( stderr, "\t visc   : viscosity of the fluid\n" );
-		fprintf ( stderr, "\t force  : scales the mouse movement that generate a force\n" );
-		fprintf ( stderr, "\t source : amount of density that will be deposited\n" );
+		fprintf ( stderr, "\t N       : grid resolution\n" );
+		fprintf ( stderr, "\t dt      : time step\n" );
+		fprintf ( stderr, "\t diff    : diffusion rate of the density\n" );
+		fprintf ( stderr, "\t visc    : viscosity of the fluid\n" );
+		fprintf ( stderr, "\t force   : scales the mouse movement that generate a force\n" );
+		fprintf ( stderr, "\t source  : amount of density that will be deposited\n" );
+		fprintf ( stderr, "\t epsilon : small scale detail control \n" );
+		fprintf ( stderr, "\t h       : spatial discretion \n");
 		exit ( 1 );
 	}
-
+*/
 	if ( argc == 1 ) {
 		N = 64;
 		dt = 0.1f;
@@ -325,8 +329,10 @@ int main ( int argc, char ** argv )
 		visc = 0.0f;
 		force = 5.0f;
 		source = 100.0f;
-		fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g\n",
-			N, dt, diff, visc, force, source );
+		eps = 1/N;
+		h = 0.1;
+		fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g epsilon=%g h=%g\n",
+			N, dt, diff, visc, force, source, eps, h );
 	} else {
 		N = atoi(argv[1]);
 		dt = atof(argv[2]);
@@ -334,6 +340,8 @@ int main ( int argc, char ** argv )
 		visc = atof(argv[4]);
 		force = atof(argv[5]);
 		source = atof(argv[6]);
+		eps = atof(argv[7]);
+		h = atof(argv[8]);
 	}
 
 	printf ( "\n\nHow to use this demo:\n\n" );
