@@ -329,8 +329,8 @@ int main ( int argc, char ** argv )
 		visc = 0.0f;
 		force = 5.0f;
 		source = 100.0f;
-		eps = 1/N;
-		h = 0.1;
+		eps = 1;
+		h = 1/N;
 		fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g epsilon=%g h=%g\n",
 			N, dt, diff, visc, force, source, eps, h );
 	} else {

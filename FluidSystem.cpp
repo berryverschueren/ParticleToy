@@ -116,7 +116,7 @@ void vorticity_force ( int N, float * u, float * v, float dt, double eps, double
     int i,j;
     FOR_EACH_CELL
             // calculate force for current position and velocity
-            float f = eps * h * pow(2, 0.5) * ( v[IX(i,j)] - u[IX(i,j)] );
+            float f = eps * h * pow(2, 0.5) * ( u[IX(i,j)] - v[IX(i,j)] );
             // get current velocity += dt * force
             u[IX(i,j)] += dt * f;
             v[IX(i,j)] += dt * -f;
