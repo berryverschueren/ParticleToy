@@ -121,7 +121,7 @@ float newY=-1.0;
 // instead of moving cell centers forward in time
 // we look for particles that end up exactly at the cell centers
 // by tracing backwards in time from the cell centers
-void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, bool t, int xx, int yy )
+void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, bool t)
 {
 	int i, j, i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
@@ -304,7 +304,7 @@ void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff,
 	// source density initially contained in the array x0
 	add_source ( N, x, x0, dt ); // new density sources may be added by user interaction
 	SWAP ( x0, x ); diffuse ( N, 0, x, x0, diff, dt ); // diffuse 
-	SWAP ( x0, x ); advect ( N, 0, x, x0, u, v, dt, false, -1,-1 ); // advect
+	SWAP ( x0, x ); advect ( N, 0, x, x0, u, v, dt, false); // advect
 }
 
 void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy)
@@ -321,7 +321,7 @@ void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
 	project ( N, u, v, u0, v0 ); // conserve mass (1st time)
 
 	SWAP ( u0, u ); SWAP ( v0, v ); // swap force arrays
-	advect ( N, 1, u, u0, u0, v0, dt, true, xx,yy ); advect ( N, 2, v, v0, u0, v0, dt, true,xx, yy ); // more accurate advection because of project
+	advect ( N, 1, u, u0, u0, v0, dt, true); advect ( N, 2, v, v0, u0, v0, dt, true); // more accurate advection because of project
 	project ( N, u, v, u0, v0 ); // conserve mass (2nd time)
 }
 
