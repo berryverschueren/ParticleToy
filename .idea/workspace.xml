@@ -9,13 +9,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a2fe7da4-0765-447e-af01-235552dfb62b" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AngularSpringForce.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/AngularSpringForce.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Particle.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Particle.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ParticleSystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ParticleSystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ParticleToy.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ParticleToy.cpp" afterDir="false" />
-    </list>
+    <list default="true" id="a2fe7da4-0765-447e-af01-235552dfb62b" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,7 +24,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/SpringForce.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="264">
+            <state relative-caret-position="340">
               <caret line="20" column="8" selection-start-line="20" selection-start-column="8" selection-end-line="20" selection-end-column="8" />
             </state>
           </provider>
@@ -48,7 +42,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/AngularSpringForce.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="247">
+            <state relative-caret-position="374">
               <caret line="22" column="65" selection-start-line="22" selection-start-column="65" selection-end-line="22" selection-end-column="65" />
             </state>
           </provider>
@@ -57,7 +51,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Particle.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-96">
+            <state relative-caret-position="68">
               <caret line="4" column="57" selection-start-line="4" selection-start-column="57" selection-end-line="4" selection-end-column="57" />
             </state>
           </provider>
@@ -99,7 +93,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ParticleSystem.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1752">
+            <state relative-caret-position="1717">
               <caret line="101" column="56" selection-start-line="101" selection-start-column="56" selection-end-line="101" selection-end-column="56" />
             </state>
           </provider>
@@ -157,7 +151,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -169,6 +162,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -206,19 +200,20 @@
       <workItem from="1558446830532" duration="5765000" />
       <workItem from="1558470469027" duration="12019000" />
       <workItem from="1559118537250" duration="4157000" />
+      <workItem from="1559805440220" duration="619000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="46454000" />
+    <option name="totallyTimeSpent" value="47073000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-7" y="0" width="974" height="1055" extended-state="0" />
+    <frame x="-8" y="-8" width="1936" height="1064" extended-state="6" />
     <layout>
       <window_info id="Favorites" order="0" side_tool="true" />
-      <window_info content_ui="combo" id="Project" order="1" visible="true" weight="0.20678337" />
+      <window_info active="true" content_ui="combo" id="Project" order="1" visible="true" weight="0.21908316" />
       <window_info id="Structure" order="2" side_tool="true" weight="0.25" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="0" visible="true" weight="0.33188722" />
+      <window_info anchor="bottom" id="Terminal" order="0" visible="true" weight="0.17400645" />
       <window_info anchor="bottom" id="Event Log" order="1" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="2" />
       <window_info anchor="bottom" id="Message" order="3" />
@@ -342,6 +337,30 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/SpringForce.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="340">
+          <caret line="20" column="8" selection-start-line="20" selection-start-column="8" selection-end-line="20" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/AngularSpringForce.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="22" column="65" selection-start-line="22" selection-start-column="65" selection-end-line="22" selection-end-column="65" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Particle.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="68">
+          <caret line="4" column="57" selection-start-line="4" selection-start-column="57" selection-end-line="4" selection-end-column="57" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Particle.h">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/AngularSpringForce.o">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -362,34 +381,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Particle.h">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Particle.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-96">
-          <caret line="4" column="57" selection-start-line="4" selection-start-column="57" selection-end-line="4" selection-end-column="57" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/ParticleSystem.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1752">
+        <state relative-caret-position="1717">
           <caret line="101" column="56" selection-start-line="101" selection-start-column="56" selection-end-line="101" selection-end-column="56" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/AngularSpringForce.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="247">
-          <caret line="22" column="65" selection-start-line="22" selection-start-column="65" selection-end-line="22" selection-end-column="65" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/SpringForce.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="20" column="8" selection-start-line="20" selection-start-column="8" selection-end-line="20" selection-end-column="8" />
         </state>
       </provider>
     </entry>

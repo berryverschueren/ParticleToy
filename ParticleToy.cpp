@@ -22,10 +22,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
+#include <iostream>
+#include <string> 
 
 #define IX(i,j) ((i)+(N+2)*(j))
 extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt );
-extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt );
+extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy);
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
@@ -163,6 +165,9 @@ static void draw_density ( void )
   ----------------------------------------------------------------------
 */
 
+int xx = 0;
+int yy = 0;
+
 static void get_from_UI ( float * d, float * u, float * v )
 {
 	int i, j, size = (N+2)*(N+2);
@@ -181,6 +186,9 @@ static void get_from_UI ( float * d, float * u, float * v )
 	if ( mouse_down[0] ) {
 		u[IX(i,j)] = force * (mx-omx);
 		v[IX(i,j)] = force * (omy-my);
+
+		xx = mx;
+		yy = my;
 	}
 
 	if ( mouse_down[2] ) {
@@ -247,8 +255,10 @@ static void reshape_func ( int width, int height )
 static void idle_func ( void )
 {
 	get_from_UI ( dens_prev, u_prev, v_prev );
-	vel_step ( N, u, v, u_prev, v_prev, visc, dt );
+	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy);
 	dens_step ( N, dens, dens_prev, u, v, diff, dt );
+	xx=0;
+	yy=0;
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
