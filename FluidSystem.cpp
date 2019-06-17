@@ -39,10 +39,11 @@ void newPos(){
 
 	//std::cout<<"startH "<<startH<< " endH "<<endH<<"\n";
 }
+
 // enforce horizontal velocity = 0 on vertical walls
 // and vertical velocity = 0 on horizontal walls
 // for density and other fields we assume continuity
-void set_bnd ( int N, int b, float * x )
+void set_bnd ( int N, int b, float * x)//, float * grid)
 {
 	int i;
 
@@ -57,6 +58,41 @@ void set_bnd ( int N, int b, float * x )
 	x[IX(N+1,0  )] = 0.5f*(x[IX(N,0  )]+x[IX(N+1,1)]);
 	x[IX(N+1,N+1)] = 0.5f*(x[IX(N,N+1)]+x[IX(N+1,N)]);
 
+	/*
+	int i,j;
+	FOR_EACH_CELL
+		if(grid[IX(i,j)==1]){
+			float div = 1.0f;
+			float count = 0.0f;
+			float force_left,force_right,force_up,force_down;
+			//horizontal
+			//check nighbors
+			if(grid[IX(i-1,j)]==1){
+				force_left = b==1 ? -x[IX(i-1,j)] : x[IX(i-1,j)];
+				x[IX(i,j)] = force_left;
+				count++;
+			}
+			if(grid[IX(i+1,j)]==1){
+				force_right = b==1 ? -x[IX(i+1,j)] : x[IX(i+1,j)];
+				x[IX(i,j)] = force_right;
+				count++;
+			}
+			if(grid[IX(i,j-1)]==1){
+				force_down = b==2 ? -x[IX(i,j-1)] : x[IX(i,j-1)];
+				x[IX(i,j)] = force_down;
+				count++;
+			}
+			if(grid[IX(i,j+1)]==1){
+				force_up = b==2 ? -x[IX(i,j+1)] : x[IX(i,j+1)];
+				x[IX(i,j)] = force_up;
+				count++;
+			}
+			if(count > 1){
+				x[IX(i,j)]=div/count*(force_left+force_right+force_up+force_down);
+			}
+		}
+	END_FOR
+*/
 	for ( i=1 ; i<endW-startW ; i++ ) {
 		x[IX(startW+i,startH  )] = b==2 ? -x[IX(startW+i,startH-1)] : x[IX(startW+i,startH-1)];
 		x[IX(startW+i,endH)] = b==2 ? -x[IX(startW+i,endH+1)] : x[IX(startW+i,endH+1)];
@@ -81,7 +117,7 @@ void lin_solve ( int N, int b, float * x, float * x0, float a, float c )
 		FOR_EACH_CELL
 			x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/c;		
 		END_FOR
-		set_bnd ( N, b, x );
+		set_bnd ( N, b, x);
 	}
 }
 
@@ -281,8 +317,17 @@ void project ( int N, float * u, float * v, float * p, float * div )
 	set_bnd ( N, 1, u ); set_bnd ( N, 2, v );
 }
 
-void new_object_position(int N, int xx, int yy){
+void new_object_position(int N, int xx, int yy){//, float * grid){
 	int i, j;
+
+	i = std::ceil(xx/8);
+	j = std::ceil((512-yy)/8);
+
+	/*if(grid[IX(i,j)]==1 || grid[IX(i,j)]==2){
+		newX = i;
+		newY = j;
+	}*/
+	 
 	
 	for (i = startW; i <= endW; i++)
 	{
@@ -318,6 +363,7 @@ void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff,
 
 void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy)
 {
+	//gridTest();
 	newPos();
 	new_object_position(N, xx, yy);
 
