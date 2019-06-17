@@ -154,11 +154,12 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			all.push_back(std::to_string(i)+std::to_string(j));
 		}
 	}
+	
 	// Start with two grids: one that contains the density values from the previous time step and one
 	// that will contain the new values. For each grid cell of the latter we trace the cell’s center
 	// position backwards through the velocity field. We then linearly interpolate from the grid of
 	// previous density values and assign this value to the current grid cell.
-	int ii = 0;
+	//int ii = 0;
 	dt0 = dt*N;
 	float force = 0.0;
 	FOR_EACH_CELL
@@ -166,10 +167,19 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 		// linearly interpolating the density at their starting location
 		// from the four closest neighbors
 		auto cell = std::to_string(i)+std::to_string(j);
+
+		if(std::find(border.begin(), border.end(), cell) != border.end()) {
+			
+			if(t){
+				force += d[IX(i,j)];
+				//std::cout<< "f " <<d[IX(i,j)]<<"\n";
+			}
+		}
 	
 		if(std::find(all.begin(), all.end(), cell) != all.end()) {
 			//in object
 			//is force
+			d[IX(i,j)] = 0;
 			if(forceX != 0.0 && forceY != 0.0){
 				if(t){
 					if(b==1){
@@ -179,10 +189,9 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 						//vertical
 						d[IX(i,j)] = forceY;
 					}
-				}else{
-					d[IX(i,j)] = 0;
 				}
 			}
+			//}
 		}else{
 			x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
 
@@ -201,12 +210,12 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			
 		}
 		
-		if(std::find(border.begin(), border.end(), cell) != border.end()) {
+		//if(std::find(border.begin(), border.end(), cell) != border.end()) {
 			
 			//if(t){
-			//	force += d[IX(i,j)];
+				//force += d[IX(i,j)];
 				//std::cout<< "f " <<d[IX(i,j)]<<"\n";
-		//	}
+			//}
 			//ii++;
 			//d[IX(i,j)] = 1;
 			//find nighboring border
@@ -227,17 +236,17 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			}if(std::find(inside.begin(), inside.end(), celld) != inside.end()){
 				update(0,-1,i,j,d,d0,N,u,v, t);
 			}*/
-		}
+		//}
 	END_FOR
 
-	//if(b==1){
+	if(b==1){
 		//horizontal force
-		//posX = posX - force*2.0;
-		//std::cout<< "h " <<posX<<"\n";
-	//}else if(b==2){
-		//posY = posY - force*2.0;
+		//posX = posX - force*20.0;
+		//std::cout<< "h " <<force<<"\n";
+	}else if(b==2){
+		//posY = posY - force*20.0;
 		//std::cout<< "v " <<posY<<"\n";
-	//}
+	}
 
 	//std::cout<<"count "<< std::to_string(ii)<<" num ="<<width*heigt << " border= "<<border.size() << "\n";
 	//clip_path( N, b, d);
