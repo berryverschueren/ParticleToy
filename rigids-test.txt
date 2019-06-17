@@ -1,0 +1,146 @@
+
+#include "include/Eigen/Dense"
+#include "include/Eigen/IterativeLinearSolvers"
+using namespace Eigen;
+
+struct RigidBody {
+	/* Constant quantities */
+	double 	 mass; 		/* mass M */
+	Matrix3f Ibody, 	/* Ibody */
+			 Ibodyinv;	/* I−1 body (inverse of Ibody) */
+	
+	/* State variables */
+	Vector3f x; /* x(t) */
+	Matrix3f R; /* R(t) */
+	Vector3f P, /* P(t) */
+		     L; /* L(t) */
+	
+	/* Derived quantities (auxiliary variables) */
+	Matrix3f Iinv; 	/* I−1(t) */
+	Vector3f v, 		/* v(t) */
+		     omega; 	/* ω(t) */
+	
+	/* Computed quantities */
+	Vector3f force,  /* F(t) */
+		     torque; /* τ(t) */
+};
+
+#define NBODIES 1
+
+// Global array of rigid bodies
+RigidBody Bodies[NBODIES];
+
+/* Copy the state information into an array */
+void State_to_Array(RigidBody *rb, double *y)
+{
+	*y++ = rb->x[0]; /* x component of position */
+	*y++ = rb->x[1]; /* etc. */
+	*y++ = rb->x[2];
+	for(int i = 0; i < 3; i++) /* copy rotation matrix */
+		for(int j = 0; j < 3; j++)
+			*y++ = rb->R[i,j];
+
+	*y++ = rb->P[0];
+	*y++ = rb->P[1];
+	*y++ = rb->P[2];
+	*y++ = rb->L[0];
+	*y++ = rb->L[1];
+	*y++ = rb->L[2];
+}
+
+/* Copy information from an array into the state variables */
+void Array_to_State(RigidBody *rb, double *y)
+{
+	rb->x[0] = *y++;
+	rb->x[1] = *y++;
+	rb->x[2] = *y++;
+	for(int i = 0; i < 3; i++)
+		for(int j = 0; j < 3; j++)
+			rb->R[i,j] = *y++;
+	
+	rb->P[0] = *y++;
+	rb->P[1] = *y++;
+	rb->P[2] = *y++;
+	rb->L[0] = *y++;
+	rb->L[1] = *y++;
+	rb->L[2] = *y++;
+
+	/* Compute auxiliary variables... */
+	/* v(t) = P(t)/M */
+	rb->v = rb->P / mass;
+	/* I−1(t) = R(t)I−1bodyR(t)T*/
+	rb->Iinv = R * Ibodyinv * Transpose(R);
+	/* ω(t) = I−1(t)L(t) */
+	rb->omega = rb->Iinv * rb->L;
+}
+
+#define STATE_SIZE 18
+
+void Array_to_Bodies(double y[ ])
+{
+	for(int i = 0; i < NBODIES; i++)
+		Array_to_State(&Bodies[i], &y[i * STATE_SIZE]);
+}
+
+void Bodies_to_Array(double y[ ])
+{
+	for(int i = 0; i < NBODIES; i++)
+		State_to_Array(&Bodies[i], &y[i * STATE_SIZE]);
+}
+
+void Compute_Force_and_Torque(double t, RigidBody *rb);
+
+void dydt(double t, double y[ ], double ydot[ ])
+{
+	/* put data in y[ ] into Bodies[ ] */
+	Array_to_Bodies(y);
+	for(int i = 0; i < NBODIES; i++)
+	{
+		Compute_Force_and_Torque(t, &Bodies[i]);
+		ddt_State_to_Array(&Bodies[i],
+						   &ydot[i * STATE_SIZE]);
+	}
+}
+
+void ddt_State_to_Array(RigidBody *rb, double *ydot)
+{
+	/* copy ddt x(t) = v(t) into ydot */
+	*ydot++ = rb->v[0];
+	*ydot++ = rb->v[1];
+	*ydot++ = rb->v[2];
+	
+	/* Compute R˙(t) = ω(t)∗R(t) */
+	matrix Rdot = Star(rb->omega) * rb->R;
+	
+	/* copy R˙(t) into array */
+	for(int i = 0; i < 3; i++)
+		for(int j = 0; j < 3; j++)
+			*ydot++ = Rdot[i,j];
+	
+	*ydot++ = rb->force[0]; /* ddt P(t) = F(t) */
+	*ydot++ = rb->force[1];
+	*ydot++ = rb->force[2];
+	*ydot++ = rb->torque[0]; /* ddt L(t) = τ(t) */
+	*ydot++ = rb->torque[1];
+	*ydot++ = rb->torque[2];
+}
+
+matrix Star(triple a);
+
+void RunSimulation()
+{
+	double y0[STATE_SIZE * NBODIES],
+		   yfinal[STATE_SIZE * NBODIES];
+	InitStates();
+	Bodies_to_Array(yfinal);
+	{
+		/* copy yfinal back to y0 */
+		for(int i = 0; i < STATE_SIZE * NBODIES; i++)
+		y0[i] = yfinal[i];
+		ode(y0, yfinal, STATE_SIZE * NBODIES,
+		t, t+1./30., dydt);
+		/* copy ddtY(t + 1/30 ) into state variables */
+		Array_to_Bodies(yfinal);
+		DisplayBodies();
+	}
+}

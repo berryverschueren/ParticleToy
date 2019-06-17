@@ -24,10 +24,13 @@
 #include <GL/glut.h>
 #include <iostream>
 #include <string> 
+#include "include/Eigen/Dense"
+#include "include/Eigen/IterativeLinearSolvers"
+using namespace Eigen;
 
 #define IX(i,j) ((i)+(N+2)*(j))
-extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt );
-extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy);
+extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt float* grid);
+extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy, float* grid);
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
@@ -37,6 +40,12 @@ static int win_id;
 static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
+
+// body definition
+static int width = 20, height = 10;
+static int centerX = 20, centerY = 30;
+static float * grid, * grid_prev;
+static float transX, transY;
 
 /*
   ----------------------------------------------------------------------
@@ -53,6 +62,8 @@ static void free_data ( void )
 	if ( v_prev ) free ( v_prev );
 	if ( dens ) free ( dens );
 	if ( dens_prev ) free ( dens_prev );
+	if (grid) free(grid);
+	if (grid) free(grid_prev);
 }
 
 static void clear_data ( void )
@@ -61,6 +72,7 @@ static void clear_data ( void )
 
 	for ( i=0 ; i<size ; i++ ) {
 		u[i] = v[i] = u_prev[i] = v_prev[i] = dens[i] = dens_prev[i] = 0.0f;
+		grid[i] = grid_prev[1] = 0.0f;
 	}
 }
 
@@ -74,13 +86,54 @@ static int allocate_data ( void )
 	v_prev		= (float *) malloc ( size*sizeof(float) );
 	dens		= (float *) malloc ( size*sizeof(float) );	
 	dens_prev	= (float *) malloc ( size*sizeof(float) );
+	grid 		= (float *) malloc (size*sizeof(float));
+	grid_prev 	= (float *) malloc (size*sizeof(float));
 
-	if ( !u || !v || !u_prev || !v_prev || !dens || !dens_prev ) {
+	if ( !u || !v || !u_prev || !v_prev || !dens || !dens_prev || !grid || !grid_prev) {
 		fprintf ( stderr, "cannot allocate data\n" );
 		return ( 0 );
 	}
 
 	return ( 1 );
+}
+
+static void create_object(int x, int y, int width, int height) {
+	int startX = x - (width / 2);
+	int startY = y - (height / 2);
+
+	// init grid
+	for (int i = 0; i <= N; i++) {
+		for (int j = 0; j <= N; j++) {
+			grid[IX(i, j)] = grid_prev[IX(i, j)] = 0.0f;
+		}
+	}
+
+	// content cells
+	for (int i = startX; i < (startX + width); i++) {
+		for (int j = startY; j < (startY + height); j++) {
+			grid[IX(i, j)] = grid_prev[IX(i, j)] = 2.0f;
+		}
+	}
+
+	// top border
+	for (int i = 0; i <= width; i++) {
+		grid[IX(startX + i, startY)] = grid_prev[IX(startX + i, startY)] = 1.0f;
+	}
+	
+	// bottom border
+	for (int i = 0; i <= width; i++) {
+		grid[IX(startX + i, startY + height)] = grid_prev[IX(startX + i, startY + height)] = 1.0f;
+	}
+	
+	// left border
+	for (int i = 0; i <= height; i++) {
+		grid[IX(startX, startY + i)] = grid_prev[IX(startX, startY + i)] = 1.0f;
+	}
+	
+	// right border
+	for (int i = 0; i <= height; i++) {
+		grid[IX(startX + width, startY + i)] = grid_prev[IX(startX + width, startY + i)] = 1.0f;
+	}
 }
 
 
@@ -159,6 +212,32 @@ static void draw_density ( void )
 	glEnd ();
 }
 
+static void draw_object() {
+	
+	int i, j;
+	float x, y, h;
+
+	h = 1.0f/N;
+  	
+	glBegin( GL_QUADS );
+
+  	for ( i=0 ; i<=N ; i++ ) {
+		x = (i-0.5f)*h;
+		for ( j=0 ; j<=N ; j++ ) {
+			y = (j-0.5f)*h;
+
+			auto color = 0.2f * grid[IX(i,j)];
+			glColor3f(0.2f * grid[IX(i,j)], 0.1f * grid[IX(i,j)], 0.3f * grid[IX(i,j)]);
+			glVertex2f ( x, y );
+			glVertex2f ( x+h, y );
+			glVertex2f ( x+h, y+h );
+			glVertex2f ( x, y+h );
+		}
+	}
+
+  glEnd();
+}
+
 /*
   ----------------------------------------------------------------------
    relates mouse movements to forces sources
@@ -186,6 +265,10 @@ static void get_from_UI ( float * d, float * u, float * v )
 	if ( mouse_down[0] ) {
 		u[IX(i,j)] = force * (mx-omx);
 		v[IX(i,j)] = force * (omy-my);
+
+		centerX = mx /8;
+		centerY = (512 - my) /8;
+		create_object(centerX, centerY, width, height);
 
 		xx = mx;
 		yy = my;
@@ -254,9 +337,9 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-	get_from_UI ( dens_prev, u_prev, v_prev );
-	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy);
-	dens_step ( N, dens, dens_prev, u, v, diff, dt );
+	get_from_UI ( dens_prev, u_prev, v_prev, grid );
+	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy, grid);
+	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid);
 	xx=0;
 	yy=0;
 
@@ -269,7 +352,11 @@ static void display_func ( void )
 	pre_display ();
 
 		if ( dvel ) draw_velocity ();
-		else		draw_density ();
+		else {		
+			draw_density ();
+			draw_object ();
+		}
+
 
 	post_display ();
 }
@@ -357,6 +444,7 @@ int main ( int argc, char ** argv )
 
 	if ( !allocate_data () ) exit ( 1 );
 	clear_data ();
+	create_object(centerX, centerY, width, height);
 
 	win_x = 512;
 	win_y = 512;
