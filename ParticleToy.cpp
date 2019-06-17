@@ -29,7 +29,7 @@
 using namespace Eigen;
 
 #define IX(i,j) ((i)+(N+2)*(j))
-extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt float* grid);
+extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid);
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy, float* grid);
 static int N, dvel;
 static float dt, diff, visc, force, source;
@@ -42,8 +42,8 @@ static int mouse_down[3];
 static int omx, omy, mx, my;
 
 // body definition
-static int width = 20, height = 10;
-static int centerX = 20, centerY = 30;
+static int width = 10, height = 10;
+static int centerX = 10, centerY = 10;
 static float * grid, * grid_prev;
 static float transX, transY;
 
@@ -266,12 +266,18 @@ static void get_from_UI ( float * d, float * u, float * v )
 		u[IX(i,j)] = force * (mx-omx);
 		v[IX(i,j)] = force * (omy-my);
 
-		centerX = mx /8;
-		centerY = (512 - my) /8;
+		int ii = std::ceil(mx/8);
+		int jj = std::ceil((512-my)/8);
+
+	 	if(grid[IX(i,j)]==1 || grid[IX(i,j)]==2){
+			 xx = ii - centerX;
+			 yy = jj - centerY;
+			centerX = ii;
+			centerY = jj;
+		}
+
 		create_object(centerX, centerY, width, height);
 
-		xx = mx;
-		yy = my;
 	}
 
 	if ( mouse_down[2] ) {
@@ -337,7 +343,7 @@ static void reshape_func ( int width, int height )
 
 static void idle_func ( void )
 {
-	get_from_UI ( dens_prev, u_prev, v_prev, grid );
+	get_from_UI ( dens_prev, u_prev, v_prev);
 	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy, grid);
 	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid);
 	xx=0;
@@ -354,7 +360,7 @@ static void display_func ( void )
 		if ( dvel ) draw_velocity ();
 		else {		
 			draw_density ();
-			draw_object ();
+			//draw_object ();
 		}
 
 

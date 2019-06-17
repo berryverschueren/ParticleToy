@@ -43,7 +43,7 @@ void newPos(){
 // enforce horizontal velocity = 0 on vertical walls
 // and vertical velocity = 0 on horizontal walls
 // for density and other fields we assume continuity
-void set_bnd ( int N, int b, float * x)//, float * grid)
+void set_bnd ( int N, int b, float * x, float * grid)
 {
 	int i;
 
@@ -58,41 +58,50 @@ void set_bnd ( int N, int b, float * x)//, float * grid)
 	x[IX(N+1,0  )] = 0.5f*(x[IX(N,0  )]+x[IX(N+1,1)]);
 	x[IX(N+1,N+1)] = 0.5f*(x[IX(N,N+1)]+x[IX(N+1,N)]);
 
-	/*
-	int i,j;
+	
+	int j;
+
+	
 	FOR_EACH_CELL
-		if(grid[IX(i,j)==1]){
+	//std::cout<<grid[IX(i,j)]<<"\n";
+		if(grid[IX(i,j)]==1){
+			
 			float div = 1.0f;
 			float count = 0.0f;
-			float force_left,force_right,force_up,force_down;
+			float force_left = 0.0f,force_right  = 0.0f,force_up= 0.0f,force_down= 0.0f;
+
 			//horizontal
 			//check nighbors
-			if(grid[IX(i-1,j)]==1){
-				force_left = b==1 ? -x[IX(i-1,j)] : x[IX(i-1,j)];
+			if(grid[IX(i-1,j)]==0){
+				force_left = b==2 ? -x[IX(i-1,j)] : x[IX(i-1,j)];
 				x[IX(i,j)] = force_left;
 				count++;
 			}
-			if(grid[IX(i+1,j)]==1){
-				force_right = b==1 ? -x[IX(i+1,j)] : x[IX(i+1,j)];
+			if(grid[IX(i+1,j)]==0){
+				force_right = b==2 ? -x[IX(i+1,j)] : x[IX(i+1,j)];
 				x[IX(i,j)] = force_right;
 				count++;
 			}
-			if(grid[IX(i,j-1)]==1){
-				force_down = b==2 ? -x[IX(i,j-1)] : x[IX(i,j-1)];
+			if(grid[IX(i,j-1)]==0){
+				force_down = b==1 ? -x[IX(i,j-1)] : x[IX(i,j-1)];
 				x[IX(i,j)] = force_down;
 				count++;
 			}
-			if(grid[IX(i,j+1)]==1){
-				force_up = b==2 ? -x[IX(i,j+1)] : x[IX(i,j+1)];
+			if(grid[IX(i,j+1)]==0){
+				force_up = b==1 ? -x[IX(i,j+1)] : x[IX(i,j+1)];
 				x[IX(i,j)] = force_up;
 				count++;
 			}
+			
+			
 			if(count > 1){
+				//std::cout<<(force_left+force_right+force_up+force_down)<<"\n";
 				x[IX(i,j)]=div/count*(force_left+force_right+force_up+force_down);
 			}
 		}
 	END_FOR
-*/
+ 
+ /*
 	for ( i=1 ; i<endW-startW ; i++ ) {
 		x[IX(startW+i,startH  )] = b==2 ? -x[IX(startW+i,startH-1)] : x[IX(startW+i,startH-1)];
 		x[IX(startW+i,endH)] = b==2 ? -x[IX(startW+i,endH+1)] : x[IX(startW+i,endH+1)];
@@ -106,10 +115,11 @@ void set_bnd ( int N, int b, float * x)//, float * grid)
 	x[IX(startW,endH  )] = 0.5f*(x[IX(startW-1,endH  )]+x[IX(startW,endH+1  )]);
 	x[IX(endW  ,startH)] = 0.5f*(x[IX(endW+1,startH  )]+x[IX(endW,startH-1  )]);
 	x[IX(endW  ,endH  )] = 0.5f*(x[IX(endW+1,endH    )]+x[IX(endW,endH+1    )]);
+	*/
 }
 
 // Gauss-Seidel relaxation to maintain stable system for large timestep / diff rate etc..
-void lin_solve ( int N, int b, float * x, float * x0, float a, float c )
+void lin_solve ( int N, int b, float * x, float * x0, float a, float c, float * grid )
 {
 	int i, j, k;
 
@@ -117,16 +127,16 @@ void lin_solve ( int N, int b, float * x, float * x0, float a, float c )
 		FOR_EACH_CELL
 			x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/c;		
 		END_FOR
-		set_bnd ( N, b, x);
+		set_bnd ( N, b, x, grid);
 	}
 }
 
-void diffuse ( int N, int b, float * x, float * x0, float diff, float dt )
+void diffuse ( int N, int b, float * x, float * x0, float diff, float dt, float * grid  )
 {
 	// compute diffusion rate a
 	float a=dt*diff*N*N;
 	// Gauss-Seidel relaxation used as a stable way to solve diffusion for large timestep / diffusion rate
-	lin_solve ( N, b, x, x0, a, 1+4*a );
+	lin_solve ( N, b, x, x0, a, 1+4*a, grid );
 }
 
 bool te= false;
@@ -157,7 +167,7 @@ float newY=-1.0;
 // instead of moving cell centers forward in time
 // we look for particles that end up exactly at the cell centers
 // by tracing backwards in time from the cell centers
-void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, bool t)
+void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, bool t, float * grid, float xx, float yy)
 {
 	int i, j, i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
@@ -167,7 +177,8 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 	std::vector<std::string> all;
 
 	/*object forces */
-	float forceX=0.0, forceY=0.0;
+	//float forceX=0.0, forceY=0.0;
+	/*
 	if(newX != -1.0){
 		forceX = newX - posX;
 		posX = newX;
@@ -175,21 +186,21 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 	if(newY != -1.0){
 		forceY = newY - posY;
 		posY = newY;	
-	}
-	newPos();
-	
-	for (i = startW; i <= endW; i++)
-	{
-		for (j = startH; j <= endH; j++)
-		{
-			if(j==startH ||j==endH ||i==startW||i==endW){
+	}*/
+	//newPos();
+/*	
+	//for (i = startW; i <= endW; i++)
+	//{
+	//	for (j = startH; j <= endH; j++)
+	//	{
+	//		if(j==startH ||j==endH ||i==startW||i==endW){
 				border.push_back(std::to_string(i)+std::to_string(j));
 			}else{
 			    inside.push_back(std::to_string(i)+std::to_string(j));
 			}
 			all.push_back(std::to_string(i)+std::to_string(j));
 		}
-	}
+	}*/
 	
 	// Start with two grids: one that contains the density values from the previous time step and one
 	// that will contain the new values. For each grid cell of the latter we trace the cell’s center
@@ -202,28 +213,48 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 		// amount of density that the particle carries is obtained by 
 		// linearly interpolating the density at their starting location
 		// from the four closest neighbors
-		auto cell = std::to_string(i)+std::to_string(j);
+		//auto cell = std::to_string(i)+std::to_string(j);
 
-		if(std::find(border.begin(), border.end(), cell) != border.end()) {
-			
+		//if(std::find(border.begin(), border.end(), cell) != border.end()) {
+		if(grid[IX(i,j)]==1){	
 			if(t){
 				force += d[IX(i,j)];
-				//std::cout<< "f " <<d[IX(i,j)]<<"\n";
+				
 			}
 		}
 	
-		if(std::find(all.begin(), all.end(), cell) != all.end()) {
+		//if(std::find(all.begin(), all.end(), cell) != all.end()) {
+		if(grid[IX(i,j)]==1 || grid[IX(i,j)]==2){
 			//in object
 			//is force
-			d[IX(i,j)] = 0;
-			if(forceX != 0.0 && forceY != 0.0){
+			if(xx >0 || xx<0){
+//std::cout<<xx<<"\n";
+
+					}
+
+			int xxx = (int)xx;
+			int yyy = (int)yy;
+			//if(xxx>0||yyy>0)std::cout<<xxx<<" "<<yyy<<"\n";
+
+			if(!t){
+				
+				//if(grid[IX(i,j)]==2){	
+					d[IX(i+xxx,j+yyy)] += d[IX(i,j)];
+					//std::cout<<d[IX(i+xxx,j+yyy)]<<"\n";
+					//d[IX(i,j)] += 0.5;
+				//}
+				//
+			}
+			
+			
+			if(xx != 0.0 && yy != 0.0){
 				if(t){
 					if(b==1){
 						//horizontal
-						d[IX(i,j)] = forceX;		
+						d[IX(i,j)] = xx;		
 					}else if(b==2){
 						//vertical
-						d[IX(i,j)] = forceY;
+						d[IX(i,j)] = yy;
 					}
 				}
 			}
@@ -286,14 +317,14 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 
 	//std::cout<<"count "<< std::to_string(ii)<<" num ="<<width*heigt << " border= "<<border.size() << "\n";
 	//clip_path( N, b, d);
-	set_bnd ( N, b, d );
+	set_bnd ( N, b, d, grid);
 
 }
 
 
 
 // make the fluid mass conserving
-void project ( int N, float * u, float * v, float * p, float * div )
+void project ( int N, float * u, float * v, float * p, float * div, float * grid)
 {
 	int i, j;
 	
@@ -306,29 +337,22 @@ void project ( int N, float * u, float * v, float * p, float * div )
 		div[IX(i,j)] = -0.5f*(u[IX(i+1,j)]-u[IX(i-1,j)]+v[IX(i,j+1)]-v[IX(i,j-1)])/N;
 		p[IX(i,j)] = 0;
 	END_FOR	
-	set_bnd ( N, 0, div ); set_bnd ( N, 0, p );
+	set_bnd ( N, 0, div, grid ); set_bnd ( N, 0, p, grid );
 
-	lin_solve ( N, 0, p, div, 1, 4 );
+	lin_solve ( N, 0, p, div, 1, 4, grid );
 
 	FOR_EACH_CELL
 		u[IX(i,j)] -= 0.5f*N*(p[IX(i+1,j)]-p[IX(i-1,j)]);
 		v[IX(i,j)] -= 0.5f*N*(p[IX(i,j+1)]-p[IX(i,j-1)]);
 	END_FOR
-	set_bnd ( N, 1, u ); set_bnd ( N, 2, v );
+	set_bnd ( N, 1, u, grid ); set_bnd ( N, 2, v, grid);
 }
 
-void new_object_position(int N, int xx, int yy){//, float * grid){
+void new_object_position(int N, int xx, int yy, float * grid){
 	int i, j;
 
-	i = std::ceil(xx/8);
-	j = std::ceil((512-yy)/8);
 
-	/*if(grid[IX(i,j)]==1 || grid[IX(i,j)]==2){
-		newX = i;
-		newY = j;
-	}*/
-	 
-	
+	/*
 	for (i = startW; i <= endW; i++)
 	{
 		for (j = startH; j <= endH; j++)
@@ -347,36 +371,36 @@ void new_object_position(int N, int xx, int yy){//, float * grid){
 				}
 			}
 		}
-	}
+	}*/
 	
 	
 }
 
-void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt )
+void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float * grid)
 {
 	//newPos();
 	// source density initially contained in the array x0
 	add_source ( N, x, x0, dt ); // new density sources may be added by user interaction
-	SWAP ( x0, x ); diffuse ( N, 0, x, x0, diff, dt ); // diffuse 
-	SWAP ( x0, x ); advect ( N, 0, x, x0, u, v, dt, false); // advect
+	SWAP ( x0, x ); diffuse ( N, 0, x, x0, diff, dt, grid ); // diffuse 
+	SWAP ( x0, x ); advect ( N, 0, x, x0, u, v, dt, false, grid, 0.0, 0.0); // advect
 }
 
-void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy)
+void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy, float * grid)
 {
 	//gridTest();
 	newPos();
-	new_object_position(N, xx, yy);
+	new_object_position(N, xx, yy, grid);
 
 	// add forces stored in the arrays u0 and v0 re-using the add_source function
 	add_source ( N, u, u0, dt ); add_source ( N, v, v0, dt );
 	// 
-	SWAP ( u0, u ); diffuse ( N, 1, u, u0, visc, dt );
-	SWAP ( v0, v ); diffuse ( N, 2, v, v0, visc, dt );
+	SWAP ( u0, u ); diffuse ( N, 1, u, u0, visc, dt, grid );
+	SWAP ( v0, v ); diffuse ( N, 2, v, v0, visc, dt, grid );
 
-	project ( N, u, v, u0, v0 ); // conserve mass (1st time)
+	project ( N, u, v, u0, v0, grid); // conserve mass (1st time)
 
 	SWAP ( u0, u ); SWAP ( v0, v ); // swap force arrays
-	advect ( N, 1, u, u0, u0, v0, dt, true); advect ( N, 2, v, v0, u0, v0, dt, true); // more accurate advection because of project
-	project ( N, u, v, u0, v0 ); // conserve mass (2nd time)
+	advect ( N, 1, u, u0, u0, v0, dt, true, grid, xx, yy); advect ( N, 2, v, v0, u0, v0, dt, true, grid, xx, yy); // more accurate advection because of project
+	project ( N, u, v, u0, v0, grid); // conserve mass (2nd time)
 }
 
