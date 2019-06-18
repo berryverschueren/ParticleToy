@@ -29,9 +29,9 @@
 using namespace Eigen;
 
 #define IX(i,j) ((i)+(N+2)*(j))
-extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid);
-extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy, float* grid);
-static int N, dvel;
+extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid, int xx, int yy, int &centerX, int &centerY);
+extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, float dt, int xx, int yy, float zz, float* grid, int &centerX, int &centerY, float* prev_grid);
+static int N, dvel, ddel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
 static float * dens, * dens_prev;
@@ -43,9 +43,10 @@ static int omx, omy, mx, my;
 
 // body definition
 static int width = 10, height = 10;
-static int centerX = 10, centerY = 10;
+static int centerX = 30, centerY = 30;
 static float * grid, * grid_prev;
 static float transX, transY;
+float * init_grid = (float *) malloc (((64+2)*(64+2))*sizeof(float));
 
 /*
   ----------------------------------------------------------------------
@@ -115,12 +116,12 @@ static void create_object(int x, int y, int width, int height) {
 		}
 	}
 
-	// top border
+	// bottom border
 	for (int i = 0; i <= width; i++) {
 		grid[IX(startX + i, startY)] = grid_prev[IX(startX + i, startY)] = 1.0f;
 	}
 	
-	// bottom border
+	// top border
 	for (int i = 0; i <= width; i++) {
 		grid[IX(startX + i, startY + height)] = grid_prev[IX(startX + i, startY + height)] = 1.0f;
 	}
@@ -246,6 +247,7 @@ static void draw_object() {
 
 int xx = 0;
 int yy = 0;
+float zz = 0;
 
 static void get_from_UI ( float * d, float * u, float * v )
 {
@@ -274,14 +276,25 @@ static void get_from_UI ( float * d, float * u, float * v )
 			 yy = jj - centerY;
 			centerX = ii;
 			centerY = jj;
+			
+			create_object(centerX, centerY, width, height);
+			
 		}
 
-		create_object(centerX, centerY, width, height);
+		
 
 	}
 
 	if ( mouse_down[2] ) {
-		d[IX(i,j)] = source;
+		if(grid[IX(i,j)]==1 || grid[IX(i,j)]==2){
+			zz += 0.1;
+			if(zz>2){
+				zz=0;
+			}
+		}else{
+			d[IX(i,j)] = source;
+		}
+		
 	}
 
 	omx = mx;
@@ -315,6 +328,10 @@ static void key_func ( unsigned char key, int x, int y )
 		case 'V':
 			dvel = !dvel;
 			break;
+		case 'b':
+		case 'B':
+			ddel = !ddel;
+			break;
 	}
 }
 
@@ -344,8 +361,8 @@ static void reshape_func ( int width, int height )
 static void idle_func ( void )
 {
 	get_from_UI ( dens_prev, u_prev, v_prev);
-	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy, grid);
-	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid);
+	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy, zz, grid, centerX, centerY, grid_prev);
+	dens_step ( N, dens, dens_prev, u, v, diff, dt, grid, xx, yy, centerX, centerY);
 	xx=0;
 	yy=0;
 
@@ -358,9 +375,10 @@ static void display_func ( void )
 	pre_display ();
 
 		if ( dvel ) draw_velocity ();
-		else {		
+		else if(ddel){		
+			draw_object ();
+		}else{
 			draw_density ();
-			//draw_object ();
 		}
 
 
@@ -447,6 +465,7 @@ int main ( int argc, char ** argv )
 	printf ( "\t Quit by pressing the 'q' key\n" );
 
 	dvel = 0;
+	ddel = 0;
 
 	if ( !allocate_data () ) exit ( 1 );
 	clear_data ();
