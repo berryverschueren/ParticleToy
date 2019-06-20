@@ -97,7 +97,19 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 	
 	FOR_EACH_CELL
 		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1) {
-			// ignore cell inside object
+			if(grid[IX(i,j)] == 2){
+				
+				if(grid[IX(i,j-1)] ==1 ){
+					d[IX(i,j-1)] += d[IX(i,j)]; 
+				} else if(grid[IX(i,j+1)] ==1 ){
+					d[IX(i,j+1)] += d[IX(i,j)]; 
+				} else if(grid[IX(i-1,j)] ==1 ){
+					d[IX(i-1,j)] += d[IX(i,j)]; 
+				} else if(grid[IX(i+1,j)] ==1 ){
+					d[IX(i+1,j)] += d[IX(i,j)]; 
+				} 
+				d[IX(i,j)] = 0;
+			}
 		} else {
 			x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
 
@@ -131,7 +143,7 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			auto aVal = 0.0f, cVal = 0.0f, eVal = 0.0f, fVal = 0.0f;
 
 			// compute force from object (for either u or v)
-			auto additionFromGrid = b == 1 ? genForce[0] : genForce[1];
+			auto additionFromGrid = b == 1 ? -genForce[0]*10 : -genForce[1]*10;
 
 			// if interpolation cell is inside, use the participation value
 			aVal = a ? additionFromGrid : d0[IX(i0,j0)];
@@ -153,9 +165,9 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			} 
 			// if one of them is inside, take special care
 			else {
-				d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
-						s1*(t0*eVal+t1*fVal);
-				// d[IX(i,j)] = (aVal+cVal+eVal+fVal)/4;	
+				//d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
+					//	s1*(t0*eVal+t1*fVal);
+				d[IX(i,j)] = (aVal+cVal+eVal+fVal)/4;	
 				// d[IX(i,j)] = (aVal+cVal+eVal+fVal);	
 				// d[IX(i,j)] = additionFromGrid;	
 			}
@@ -193,7 +205,7 @@ void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff,
 }
 
 void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
- 	float dt, int xx, int yy, float * grid, Vector2f &genForce)
+ 	float dt, float * grid, Vector2f &genForce)
 {
 	add_source ( N, u, u0, dt ); 
 	add_source ( N, v, v0, dt );

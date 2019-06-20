@@ -13,12 +13,12 @@ using namespace Eigen;
 extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, 
 	float dt, float* grid, Vector2f &genForce);
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, 
-	float dt, int xx, int yy, float* grid, Vector2f &genForce);
+	float dt, float* grid, Vector2f &genForce);
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
 static float * dens, * dens_prev;
-static RigidBody * rb = new RigidBody(Vector2f(20, 30));
+static RigidBody * rb = new RigidBody(Vector2f(0.5f, 0.5f));
 static Vector2f genForce = Vector2f(0.0f, 0.0f);
 
 static int win_id;
@@ -95,13 +95,15 @@ static void body_step(RigidBody * rb, float dt) {
 	rb->_center[1] = rb->_center[1] + (rb->_velocity[1] * dt);
 	rb->_velocity[0] = rb->_velocity[0] + ((rb->_force[0] / rb->_mass) * dt);
 	rb->_velocity[1] = rb->_velocity[1] + ((rb->_force[1] / rb->_mass) * dt);
+	//std::cout<<"x "<<rb->_center[0]<< " y "<<rb->_center[1]<<"\n";
 }
 
 static void VoxelizeRigidBody(RigidBody * rb, float * grid) {
 	// convert coordinates of rb to grid cells
 	auto h = 1.0f / N;
-	int startX = rb->_center[0] - (rb->_width / 2);
-	int startY = rb->_center[1] - (rb->_height / 2);
+	int startX = (int)(rb->_center[0]*N) - (rb->_width / 2);
+	int startY = (int)(rb->_center[1]*N) - (rb->_height / 2);
+	
 
 	// init grid
 	for (int i = 0; i <= N; i++) {
@@ -266,20 +268,26 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
 	if ( mouse_down[0] ) {
-		//u[IX(i,j)] = force * (mx-omx);
-		//v[IX(i,j)] = force * (omy-my);
+
 
 		auto dirX = mx-omx;
 		auto dirY = omy-my;
-		genForce[0] = dirX*0.001f;
-		genForce[1] = dirY*0.001f;
+		auto mouseX = mx/(float)win_x;
+		auto mouseY = (win_y-my)/(float)win_y;
 
-		xx = mx;
-		yy = my;
+		auto disX = mouseX - rb->_center[0];
+		auto disY = mouseY - rb->_center[1];
+
+		auto length = std::sqrt(std::pow(disX,2.0) + std::pow(disY,2.0));
+
+		genForce[0] = disX/length*0.001f;
+		genForce[1] = disY/length*0.001f;
 	}
 
 	if ( mouse_down[2] ) {
 		d[IX(i,j)] = source;
+		u[IX(i,j)] = force * (mx-omx);
+		v[IX(i,j)] = force * (omy-my);
 	}
 
 	omx = mx;
@@ -345,14 +353,11 @@ static void idle_func ( void )
 	get_from_UI ( dens_prev, u_prev, v_prev, grid );
 	// voxelize current rb, without moving it yet
 	VoxelizeRigidBody(rb, grid);
-	// use voxelized rb and its implied force in fluid solver
-	vel_step ( N, u, v, u_prev, v_prev, visc, dt, xx, yy, grid, rb->_velocity);
-	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid, rb->_velocity);
-	// actually move the body using euler solver
+	// actually move the body using euler solver	
 	body_step(rb, dt);
-
-	xx=0;
-	yy=0;
+	// use voxelized rb and its implied force in fluid solver
+	vel_step ( N, u, v, u_prev, v_prev, visc, dt, grid, rb->_velocity);
+	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid, rb->_velocity);
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
