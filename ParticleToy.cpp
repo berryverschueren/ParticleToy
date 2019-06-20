@@ -7,14 +7,15 @@
 #include "RigidBody.h"
 #include "include/Eigen/Dense"
 #include "include/Eigen/IterativeLinearSolvers"
+
 using namespace Eigen;
 
 #define IX(i,j) ((i)+(N+2)*(j))
 extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, 
-	float dt, float* grid, Vector2f &genForce);
+	float dt, float* grid, float* grid_prev, Vector2f &genForce);
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, 
 	float dt, float* grid, Vector2f &genForce);
-extern void acc_step (int N, float * u, float * v, float* grid, Vector2f &genForce);
+extern void acc_step (int N, float * u, float * v, float* grid, float dt, Vector2f &genForce);
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
@@ -49,7 +50,7 @@ static void free_data ( void )
 	if ( dens ) free ( dens );
 	if ( dens_prev ) free ( dens_prev );
 	if (grid) free(grid);
-	if (grid) free(grid_prev);
+	if (grid_prev) free(grid_prev);
 
 	rb->Reset();
 }
@@ -99,16 +100,16 @@ static void body_step(RigidBody * rb, float dt) {
 	//std::cout<<"vel "<<rb->_velocity[0]<< " fo "<<rb->_force[0]<<"\n";
 }
 
-static void VoxelizeRigidBody(RigidBody * rb, float * grid) {
+static void VoxelizeRigidBody(RigidBody * rb, float * grid, float * grid_prev) {
 	// convert coordinates of rb to grid cells
 	auto h = 1.0f / N;
 	int startX = (int)(rb->_center[0]*N) - (rb->_width / 2);
 	int startY = (int)(rb->_center[1]*N) - (rb->_height / 2);
-	
 
 	// init grid
 	for (int i = 0; i <= N; i++) {
 		for (int j = 0; j <= N; j++) {
+			grid_prev[IX(i,j)] = grid[IX(i, j)];
 			grid[IX(i, j)] = 0.0f;
 		}
 	}
@@ -217,7 +218,7 @@ static void draw_density ( void )
 	glEnd ();
 }
 
-static void draw_rigidBody() {
+static void draw_rigidBody(float* g, bool t) {
 	
 	int i, j;
 	float x, y, h;
@@ -231,8 +232,12 @@ static void draw_rigidBody() {
 		for ( j=0 ; j<=N ; j++ ) {
 			y = (j-0.5f)*h;
 
-			auto color = 0.2f * grid[IX(i,j)];
-			glColor3f(0.2f * grid[IX(i,j)], 0.1f * grid[IX(i,j)], 0.3f * grid[IX(i,j)]);
+			auto color = 0.2f * g[IX(i,j)];
+			if(t){
+				glColor3f(0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)], 0.3f * g[IX(i,j)]);
+			}else{
+				glColor3f(0.3f * g[IX(i,j)], 0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)]);
+			}
 			glVertex2f ( x, y );
 			glVertex2f ( x+h, y );
 			glVertex2f ( x+h, y+h );
@@ -354,14 +359,17 @@ static void idle_func ( void )
 	// get forces implied on body
 	get_from_UI ( dens_prev, u_prev, v_prev, grid );
 	// voxelize current rb, without moving it yet
-	VoxelizeRigidBody(rb, grid);
+	VoxelizeRigidBody(rb, grid, grid_prev);
 	// accumulate forces on body
-	//acc_step(N, u, v, grid, genForce); 
-	// actually move the body using euler solver	
+	acc_step(N, u, v, grid, dt, genForce); 
+	// actually move the body using euler solver
 	body_step(rb, dt);
 	// use voxelized rb and its implied force in fluid solver
 	vel_step ( N, u, v, u_prev, v_prev, visc, dt, grid, rb->_velocity);
-	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid, rb->_velocity);
+	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid, grid_prev, rb->_velocity);
+
+		
+	
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
@@ -373,11 +381,11 @@ static void display_func ( void )
 
 		if ( dvel ) { 
 			draw_velocity ();
-			//draw_rigidBody();
+			//draw_rigidBody(grid, true);
 		}
 		else {		
 			draw_density ();
-			//draw_rigidBody ();
+			//draw_rigidBody(grid_prev, false);
 		}
 
 	post_display ();

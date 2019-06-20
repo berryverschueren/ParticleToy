@@ -99,7 +99,7 @@ void clear_bnd(int N, float * grid, float * d){
 	END_FOR
 }
 
-void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, float * grid, Vector2f &genForce)
+void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, float * grid, float* grid_prev, Vector2f &genForce)
 {
 	int i, j, i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
@@ -109,13 +109,13 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1) {
 			if(grid[IX(i,j)] == 2){
 				if(grid[IX(i,j-1)] ==1 ){
-					d0[IX(i,j-2)] += d[IX(i,j)]/2; 
+					d0[IX(i,j-2)] += d[IX(i,j)]; 
 				} else if(grid[IX(i,j+1)] ==1 ){
-					d0[IX(i,j+2)] += d[IX(i,j)]/2; 
+					d0[IX(i,j+2)] += d[IX(i,j)]; 
 				} else if(grid[IX(i-1,j)] ==1 ){
-					d0[IX(i-2,j)] += d[IX(i,j)]/2; 
+					d0[IX(i-2,j)] += d[IX(i,j)]; 
 				} else if(grid[IX(i+1,j)] ==1 ){
-					d0[IX(i+2,j)] += d[IX(i,j)]/2; 
+					d0[IX(i+2,j)] += d[IX(i,j)]; 
 				} 
 			}
 			d[IX(i,j)] = 0;
@@ -123,21 +123,7 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 	END_FOR
 	
 	FOR_EACH_CELL
-		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1) {
-			/*
-			if(grid[IX(i,j)] == 2){
-				
-				if(grid[IX(i,j-1)] ==1 ){
-					d[IX(i,j-2)] += d[IX(i,j)]/2; 
-				} else if(grid[IX(i,j+1)] ==1 ){
-					d[IX(i,j+2)] += d[IX(i,j)]/2; 
-				} else if(grid[IX(i-1,j)] ==1 ){
-					d[IX(i-2,j)] += d[IX(i,j)]/2; 
-				} else if(grid[IX(i+1,j)] ==1 ){
-					d[IX(i+2,j)] += d[IX(i,j)]/2; 
-				} 
-				d[IX(i,j)] = 0;
-			}*/
+		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1){
 		} else {
 			x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
 
@@ -187,18 +173,25 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 				// 1 and 2 --> d(i,j) = d0(i,j)
 
 				// t1 != 0 --> i0 != x
-				// 
+
 				d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
 						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);	
 			} 
 			// if one of them is inside, take special care
 			else {
-				//d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
-					//	s1*(t0*eVal+t1*fVal);
+				d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
+						s1*(t0*eVal+t1*fVal);
+				//std::cout<<"testd1 "<<d[IX(i,j)]<<"\n";
 				d[IX(i,j)] = (aVal+cVal+eVal+fVal)/4;	
+				//std::cout<<"testd2 "<<d[IX(i,j)]<<"\n";
+
 				// d[IX(i,j)] = (aVal+cVal+eVal+fVal);	
 				// d[IX(i,j)] = additionFromGrid;	
 			}
+		}
+		if(grid_prev[IX(i,j)]==1 && grid[IX(i,j)]==0){
+			//std::cout<<"test"<<"\n";
+			d[IX(i,j)] = 0;
 		}
 	END_FOR
 	set_bnd ( N, b, d, grid );
@@ -223,13 +216,13 @@ void project ( int N, float * u, float * v, float * p, float * div, float * grid
 	set_bnd ( N, 1, u, grid ); set_bnd ( N, 2, v, grid );
 }
 
-void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid, Vector2f &genForce)
+void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid, float* grid_prev, Vector2f &genForce)
 {
 	add_source ( N, x, x0, dt );
 	SWAP ( x0, x ); 
 	diffuse ( N, 0, x, x0, diff, dt, grid);
 	SWAP ( x0, x ); 
-	advect ( N, 0, x, x0, u, v, dt, grid, genForce);
+	advect ( N, 0, x, x0, u, v, dt, grid, grid_prev, genForce);
 }
 
 void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
@@ -244,25 +237,46 @@ void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
 	project ( N, u, v, u0, v0, grid);
 	SWAP ( u0, u ); 
 	SWAP ( v0, v );
-	advect ( N, 1, u, u0, u0, v0, dt, grid, genForce); 
-	advect ( N, 2, v, v0, u0, v0, dt, grid, genForce);
+	advect ( N, 1, u, u0, u0, v0, dt, grid, grid, genForce); 
+	advect ( N, 2, v, v0, u0, v0, dt, grid, grid, genForce);
 	project ( N, u, v, u0, v0, grid);
 }
 
-void acc_step(int N, float * u, float * v, float * grid, Vector2f &force){
+void acc_step(int N, float * u, float * v, float * grid, float dt, Vector2f &force){
 	int i,j;
 	float accumalatedX = 0.0f, accumalatedY = 0.0f;
 	FOR_EACH_CELL
 		if(grid[IX(i,j)]==1){
-			accumalatedX += -u[IX(i,j)];
-			accumalatedY += -v[IX(i,j)];
+			float accX=0.0f, accY=0.0f;
+			int div=0;
+			if(grid[IX(i-1,j)]==0){
+				div++;
+				accX += u[IX(i-1,j)];
+				accY += v[IX(i-1,j)];
+			}
+			if(grid[IX(i+1,j)]==0){
+				accX += u[IX(i+1,j)];
+				accY += v[IX(i+1,j)];
+			}
+			if(grid[IX(i,j-1)]==0){
+				accX += u[IX(i,j-1)];
+				accY += v[IX(i,j-1)];
+			}
+			if(grid[IX(i,j+1)]==0){
+				accX += u[IX(i,j+1)];
+				accY += v[IX(i,j+1)];
+			}
+			if(div!=0){
+				accumalatedX += accX/div;
+				accumalatedY += accY/div;
+			}
 		}
 	END_FOR
-	//std::cout<<"forceX "<<force[0]<<"\n";
+	//std::cout<<"forceX "<<accumalatedX<<"\n";
 	//std::cout<<"----"<<"\n";
 	//update force
-	force[0] = force[0]+accumalatedX*0.001;
-	force[1] = force[1]+accumalatedY*0.001;
+	force[0] = force[0]+accumalatedX*dt;
+	force[1] = force[1]+accumalatedY*dt;
 	//std::cout<<"forceX "<<force[0]<<"\n";
 }
 
