@@ -11,9 +11,10 @@ using namespace Eigen;
 
 #define IX(i,j) ((i)+(N+2)*(j))
 extern void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, 
-	float dt, float* grid, Vector2f &genForce);
+	float dt, float* grid, Vector2f &genForce, float eps );
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, 
-	float dt, float* grid, Vector2f &genForce);
+	float dt, float* grid, Vector2f &genForce );
+void vorticity_force ( int N, float * u, float * v, float dt, float eps );
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
@@ -25,6 +26,8 @@ static int win_id;
 static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
+
+static float eps;
 
 // body definition
 static int width = 20, height = 10;
@@ -357,7 +360,7 @@ static void idle_func ( void )
 	body_step(rb, dt);
 	// use voxelized rb and its implied force in fluid solver
 	vel_step ( N, u, v, u_prev, v_prev, visc, dt, grid, rb->_velocity);
-	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid, rb->_velocity);
+	dens_step ( N, dens, dens_prev, u, v, diff, dt , grid, rb->_velocity, eps);
 
 	glutSetWindow ( win_id );
 	glutPostRedisplay ();
@@ -421,35 +424,39 @@ int main ( int argc, char ** argv )
 {
 	glutInit ( &argc, argv );
 
-	if ( argc != 1 && argc != 6 ) {
-		fprintf ( stderr, "usage : %s N dt diff visc force source\n", argv[0] );
+/*
+	if ( argc != 1 && argc != 7 ) {
+		fprintf ( stderr, "usage : %s N dt diff visc force source epsilon h\n", argv[0] );
 		fprintf ( stderr, "where:\n" );\
-		fprintf ( stderr, "\t N      : grid resolution\n" );
-		fprintf ( stderr, "\t dt     : time step\n" );
-		fprintf ( stderr, "\t diff   : diffusion rate of the density\n" );
-		fprintf ( stderr, "\t visc   : viscosity of the fluid\n" );
-		fprintf ( stderr, "\t force  : scales the mouse movement that generate a force\n" );
-		fprintf ( stderr, "\t source : amount of density that will be deposited\n" );
+		fprintf ( stderr, "\t N       : grid resolution\n" );
+		fprintf ( stderr, "\t dt      : time step\n" );
+		fprintf ( stderr, "\t diff    : diffusion rate of the density\n" );
+		fprintf ( stderr, "\t visc    : viscosity of the fluid\n" );
+		fprintf ( stderr, "\t force   : scales the mouse movement that generate a force\n" );
+		fprintf ( stderr, "\t source  : amount of density that will be deposited\n" );
+		fprintf ( stderr, "\t epsilon : small scale detail control \n" );
 		exit ( 1 );
 	}
-
-	if ( argc == 1 ) {
-		N = 64;
-		dt = 0.1f;
-		diff = 0.0f;
-		visc = 0.0f;
-		force = 5.0f;
-		source = 100.0f;
-		fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g\n",
-			N, dt, diff, visc, force, source );
-	} else {
-		N = atoi(argv[1]);
-		dt = atof(argv[2]);
-		diff = atof(argv[3]);
-		visc = atof(argv[4]);
-		force = atof(argv[5]);
-		source = atof(argv[6]);
-	}
+*/
+    if ( argc == 1 ) {
+        N = 64;
+        dt = 0.1f;
+        diff = 0.0f;
+        visc = 0.0f;
+        force = 5.0f;
+        source = 100.0f;
+        eps = 1.0f;
+        fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g epsilon=%g\n",
+                  N, dt, diff, visc, force, source, eps );
+    } else {
+        N = atoi(argv[1]);
+        dt = atof(argv[2]);
+        diff = atof(argv[3]);
+        visc = atof(argv[4]);
+        force = atof(argv[5]);
+        source = atof(argv[6]);
+        eps = atof(argv[7]);
+    }
 
 	printf ( "\n\nHow to use this demo:\n\n" );
 	printf ( "\t Add densities with the right mouse button\n" );
