@@ -111,7 +111,10 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			if (y<0.5f) y=0.5f;
 			if (y>N+0.5f) y=N+0.5f; 
 			j0=(int)y; j1=j0+1;
-			s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+			s1 = x-i0; // s1 == 0 --> x  == i0 (x is exact int instead of float) --> dt0*u == 0
+			s0 = 1-s1; // s1 == 0 --> s0 == 1
+			t1 = y-j0; // t1 == 0 --> y  == j0 (j is exact int instead of float) --> dt0*v == 0
+			t0 = 1-t1; // t1 == 0 --> t0 == 1
 
 			// check if interpolation cells are inside the object
 			// if so, include forces from rigid body in the new
@@ -131,20 +134,28 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			auto additionFromGrid = b == 1 ? genForce[0] : genForce[1];
 
 			// if interpolation cell is inside, use the participation value
-			if (a) aVal = additionFromGrid;
-			if (c) cVal = additionFromGrid;
-			if (e) eVal = additionFromGrid;
-			if (f) fVal = additionFromGrid;
+			aVal = a ? additionFromGrid : d0[IX(i0,j0)];
+			cVal = c ? additionFromGrid : d0[IX(i0,j1)];
+			eVal = e ? additionFromGrid : d0[IX(i1,j0)];
+			fVal = f ? additionFromGrid : d0[IX(i1,j1)];
 
 			// if none of the interpolation cells are inside
 			// the object, just do normal advection
 			if (!a && !c && !e && !f) {
+				// 1. if x == i0 --> s0 == 1 
+				// 2. if y == j0 --> t0 == 1 
+				// 1 and 2 --> d(i,j) = d0(i,j)
+
+				// t1 != 0 --> i0 != x
+				// 
 				d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
 						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);	
 			} 
 			// if one of them is inside, take special care
 			else {
-				d[IX(i,j)] = (aVal+cVal+eVal+fVal)/4;	
+				d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
+						s1*(t0*eVal+t1*fVal);
+				// d[IX(i,j)] = (aVal+cVal+eVal+fVal)/4;	
 				// d[IX(i,j)] = (aVal+cVal+eVal+fVal);	
 				// d[IX(i,j)] = additionFromGrid;	
 			}
