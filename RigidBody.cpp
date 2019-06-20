@@ -4,7 +4,14 @@
 RigidBody::RigidBody(const Vector2f & ConstructPos) :
 	_original(ConstructPos), _center(ConstructPos)
 	, _velocity(Vector2f(0.0f, 0.0f)), _force(Vector2f(0.0f, 0.0f)), 
-    _mass(1.0f), _width(10), _height(10) { }
+    _mass(1.0f), _width(10.0f/64), _height(10.0f/64), _orientation(MatrixXf::Zero(3,3)),
+	_angularVelocity(VectorXf::Zero(3)) { 
+
+		_orientation << 0.f,-1.f,0.f,
+						1.f,0.f,0.f,
+						0.f,0.f,1.f;
+
+	}
 
 RigidBody::~RigidBody(void) { }
 
@@ -17,8 +24,14 @@ void RigidBody::Reset() {
 	_velocity = Vector2f(0.0f, 0.0f);
 	_force = Vector2f(0.0f, 0.0f);
 	_mass = 1.0f;
-	_width = 10;
-	_height = 10;
+	_width = 10.0f/64;
+	_height = 10.0f/64;
+
+	_orientation = MatrixXf::Zero(3,3);
+		_orientation << 0.f,-1.f,0.f,
+						1.f,0.f,0.f,
+						0.f,0.f,1.f;
+	_angularVelocity = VectorXf::Zero(3);
 }
 
 void RigidBody::Draw() {
