@@ -28,11 +28,7 @@ static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
 
-// body definition
-static int width = 20, height = 10;
-static int centerX = 20, centerY = 30;
-static float * grid, * grid_prev;
-static float transX, transY;
+static float * grid;
 
 /*
   ----------------------------------------------------------------------
@@ -61,7 +57,7 @@ static void clear_data ( void )
 
 	for ( i=0 ; i<size ; i++ ) {
 		u[i] = v[i] = u_prev[i] = v_prev[i] = dens[i] = dens_prev[i] = 0.0f;
-		grid[i] = grid_prev[1] = 0.0f;
+		grid[i] = grid_prev[i] = 0.0f;
 	}
 
 	rb->Reset();
@@ -78,11 +74,11 @@ static int allocate_data ( void )
 	dens		= (float *) malloc ( size*sizeof(float) );	
 	dens_prev	= (float *) malloc ( size*sizeof(float) );
 	grid 		= (float *) malloc (size*sizeof(float));
-	grid_prev 	= (float *) malloc (size*sizeof(float));
+	grid_prev 		= (float *) malloc (size*sizeof(float));
 
 	rb->Reset();
 
-	if ( !u || !v || !u_prev || !v_prev || !dens || !dens_prev || !grid || !grid_prev) {
+	if ( !u || !v || !u_prev || !v_prev || !dens || !dens_prev || !grid || !grid_prev ) {
 		fprintf ( stderr, "cannot allocate data\n" );
 		return ( 0 );
 	}
@@ -93,18 +89,54 @@ static int allocate_data ( void )
 static void body_step(RigidBody * rb, float dt) {
 	rb->ResetForce();
 	rb->_force = genForce;
-	rb->_center[0] = rb->_center[0] + (rb->_velocity[0] * dt);
-	rb->_center[1] = rb->_center[1] + (rb->_velocity[1] * dt);
-	rb->_velocity[0] = 0.9*rb->_velocity[0] + ((rb->_force[0] / rb->_mass) * dt);
-	rb->_velocity[1] = 0.9*rb->_velocity[1] + ((rb->_force[1] / rb->_mass) * dt);
-	//std::cout<<"vel "<<rb->_velocity[0]<< " fo "<<rb->_force[0]<<"\n";
+	rb->_center = rb->_center + ((rb->_velocity) * dt);
+	rb->_velocity = 0.9*rb->_velocity + ((rb->_force / rb->_mass) * dt);
+
+	// 0    -az   ay
+	// az   0     -ax
+	// -ay  ax    0
+	MatrixXf w_star = MatrixXf(3,3);
+	w_star(0,0) = 0.0f;
+	w_star(0,1) = -rb->_angularVelocity[2];
+	w_star(0,2) = rb->_angularVelocity[1];
+	w_star(1,0) = rb->_angularVelocity[2];
+	w_star(1,1) = 0.0f;
+	w_star(1,2) = -rb->_angularVelocity[0];
+	w_star(2,0) = -rb->_angularVelocity[1];
+	w_star(2,1) = rb->_angularVelocity[0];
+	w_star(2,2) = 0.0f;
+
+	auto test = w_star * rb->_orientation;
+	auto newOrientation = test * dt;
+	rb->_orientation += newOrientation;
+
+	// upper right corner of init rb
+	auto loc = Vector3f(0.5f + (10.f/64), 0.5f + (10.f/64), 0.0f);
+	// some force
+	auto forc = Vector3f(10.f, 5.f, 0.0f);
+	
+	// new angular velocity == sum of (relative pos * force @ this pos) --> vec2f result (add 3f smt)
+	auto relPos = Vector3f(rb->_center[0] - loc[0], rb->_center[1] - loc[1], 0.0f);
+	auto torq = relPos.cross(forc);
+	//auto torq = Vector2f(relPos[0] * forc[0], relPos[1] * forc[1]);
+
+	//printf("torq: %g, %g, %g", torq[0], torq[1], torq[2]);
+
+	rb->_angularVelocity = Vector3f(torq[0] * dt, torq[1] * dt, torq[2] * dt);
+
+	
+	// printf("%g, %g, %g\n", rb->_orientation(0,0), rb->_orientation(0,1), rb->_orientation(0,2));
+	// printf("%g, %g, %g\n", rb->_orientation(1,0), rb->_orientation(1,1), rb->_orientation(1,2));
+	// printf("%g, %g, %g\n", rb->_orientation(2,0), rb->_orientation(2,1), rb->_orientation(2,2));
+	// printf("----\n");
 }
 
 static void VoxelizeRigidBody(RigidBody * rb, float * grid, float * grid_prev) {
 	// convert coordinates of rb to grid cells
-	auto h = 1.0f / N;
-	int startX = (int)(rb->_center[0]*N) - (rb->_width / 2);
-	int startY = (int)(rb->_center[1]*N) - (rb->_height / 2);
+	int width = (int)(rb->_width*N);
+	int height = (int)(rb->_height*N);
+	int startX = (int)(rb->_center[0]*N) - (width / 2);
+	int startY = (int)(rb->_center[1]*N) - (height / 2);
 
 	// init grid
 	for (int i = 0; i <= N; i++) {
@@ -115,30 +147,96 @@ static void VoxelizeRigidBody(RigidBody * rb, float * grid, float * grid_prev) {
 	}
 
 	// content cells
-	for (int i = startX; i < (startX + rb->_width); i++) {
-		for (int j = startY; j < (startY + rb->_height); j++) {
-			grid[IX(i, j)] = 2.0f;
+	for (float i = startX; i < (startX + width); i+=0.5f) {
+		for (float j = startY; j < (startY + height); j+=0.5f) {
+
+			//printf("Computing for: i=%g, j=%g\n", i, j);
+
+			auto x = (i * 1.f/N) - rb->_center[0];
+			auto y = (j * 1.f/N) - rb->_center[1];
+
+			//printf("Without 0-1 grid: x=%g, y=%g\n", x, y);
+			//printf("R[0]: x=%g, y=%g\n", rb->_orientation(0,0), rb->_orientation(0,1));
+			//printf("R[1]: x=%g, y=%g\n", rb->_orientation(1,0), rb->_orientation(1,1));
+
+			auto newPos = Vector2f(rb->_orientation(0,0)*x + rb->_orientation(0,1)*y + rb->_center[0],
+								rb->_orientation(1,0)*x + rb->_orientation(1,1)*y + rb->_center[1]);
+
+			//printf("Rotated to: x=%g, y=%g\n", newPos[0], newPos[1]);
+
+			// convert newPos to cell
+			auto newI = (int)(newPos[0]*N);
+			auto newJ = (int)(newPos[1]*N);
+
+			//printf("In cells: i=%d, j=%d\n", newI, newJ);
+
+			grid[IX(newI, newJ)] = 2.0f;
+			// grid[IX(i, j)] = 2.0f;
 		}
 	}
 
 	// top border
-	for (int i = 0; i <= rb->_width; i++) {
-		grid[IX(startX + i, startY)] = 1.0f;
+	for (float i = 0; i <= width; i+=0.5f) {		
+			int j = startY;			
+			auto x = ((i+startX) * 1.f/N) - rb->_center[0];
+			auto y = (j * 1.f/N) - rb->_center[1];
+			auto newPos = Vector2f(rb->_orientation(0,0)*x + rb->_orientation(0,1)*y + rb->_center[0],
+								rb->_orientation(1,0)*x + rb->_orientation(1,1)*y + rb->_center[1]);
+
+			// convert newPos to cell
+			auto newI = (int)(newPos[0]*N);
+			auto newJ = (int)(newPos[1]*N);
+
+			grid[IX(newI, newJ)] = 1.0f;
+		// grid[IX(startX + i, startY)] = 1.0f;
 	}
 	
 	// bottom border
-	for (int i = 0; i <= rb->_width; i++) {
-		grid[IX(startX + i, startY + rb->_height)] = 1.0f;
+	for (float i = 0; i <= width; i+=0.5f) {
+			int j = startY + height;
+			auto x = ((i+startX) * 1.f/N) - rb->_center[0];
+			auto y = (j * 1.f/N) - rb->_center[1];
+			auto newPos = Vector2f(rb->_orientation(0,0)*x + rb->_orientation(0,1)*y + rb->_center[0],
+								rb->_orientation(1,0)*x + rb->_orientation(1,1)*y + rb->_center[1]);
+
+			// convert newPos to cell
+			auto newI = (int)(newPos[0]*N);
+			auto newJ = (int)(newPos[1]*N);
+
+			grid[IX(newI, newJ)] = 1.0f;
+		// grid[IX(startX + i, startY + height)] = 1.0f;
 	}
 	
 	// left border
-	for (int i = 0; i <= rb->_height; i++) {
-		grid[IX(startX, startY + i)] = 1.0f;
+	for (float j = 0; j <= height; j+=0.5f) {
+			int i = startX;
+			auto x = (i * 1.f/N) - rb->_center[0];
+			auto y = ((j + startY) * 1.f/N) - rb->_center[1];
+			auto newPos = Vector2f(rb->_orientation(0,0)*x + rb->_orientation(0,1)*y + rb->_center[0],
+								rb->_orientation(1,0)*x + rb->_orientation(1,1)*y + rb->_center[1]);
+
+			// convert newPos to cell
+			auto newI = (int)(newPos[0]*N);
+			auto newJ = (int)(newPos[1]*N);
+
+			grid[IX(newI, newJ)] = 1.0f;
+		// grid[IX(startX, startY + i)] = 1.0f;
 	}
 	
 	// right border
-	for (int i = 0; i <= rb->_height; i++) {
-		grid[IX(startX + rb->_width, startY + i)] = 1.0f;
+	for (float j = 0; j <= height; j+=0.5f) {
+			int i = startX + width;
+			auto x = (i * 1.f/N) - rb->_center[0];
+			auto y = ((j + startY) * 1.f/N) - rb->_center[1];
+			auto newPos = Vector2f(rb->_orientation(0,0)*x + rb->_orientation(0,1)*y + rb->_center[0],
+								rb->_orientation(1,0)*x + rb->_orientation(1,1)*y + rb->_center[1]);
+
+			// convert newPos to cell
+			auto newI = (int)(newPos[0]*N);
+			auto newJ = (int)(newPos[1]*N);
+
+			grid[IX(newI, newJ)] = 1.0f;
+		// grid[IX(startX + width, startY + i)] = 1.0f;
 	}
 }
 

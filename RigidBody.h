@@ -18,7 +18,10 @@ class RigidBody
         Vector2f _center;
         Vector2f _force;
         Vector2f _velocity;
-        int _mass;
-        int _width;
-        int _height;
+        float _mass;
+        float _width;
+        float _height;
+
+        MatrixXf _orientation;      // rotation --> derivative == _orientation * _angularVelocity
+        VectorXf _angularVelocity;  // omega    --> derivative == relative position * force       == torque
 };
