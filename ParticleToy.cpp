@@ -282,12 +282,7 @@ static void draw_velocity ( void )
 			for ( j=0 ; j<=N ; j++ ) {
 				y = (j-0.5f)*h;
 
-				auto color = 0.2f * g[IX(i,j)];
-				if(t){
-					glColor3f(0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)], 0.3f * g[IX(i,j)]);
-				}else{
-					glColor3f(0.3f * g[IX(i,j)], 0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)]);
-				}
+				glColor3f(0.3f * grid[IX(i,j)], 0.2f * grid[IX(i,j)], 0.1f * grid[IX(i,j)]);
 				glVertex2f ( x, y );
 				glVertex2f ( x+h, y );
 				glVertex2f ( x+h, y+h );
@@ -335,12 +330,7 @@ static void draw_density ( void )
 			for ( j=0 ; j<=N ; j++ ) {
 				y = (j-0.5f)*h;
 
-				auto color = 0.2f * g[IX(i,j)];
-				if(t){
-					glColor3f(0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)], 0.3f * g[IX(i,j)]);
-				}else{
-					glColor3f(0.3f * g[IX(i,j)], 0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)]);
-				}
+				glColor3f(0.3f * grid[IX(i,j)], 0.2f * grid[IX(i,j)], 0.1f * grid[IX(i,j)]);
 				glVertex2f ( x, y );
 				glVertex2f ( x+h, y );
 				glVertex2f ( x+h, y+h );
