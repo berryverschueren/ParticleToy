@@ -28,7 +28,7 @@ static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
 
-static float * grid;
+static float * grid, *grid_prev;
 
 /*
   ----------------------------------------------------------------------

@@ -275,8 +275,8 @@ void acc_step(int N, float * u, float * v, float * grid, float dt, Vector2f &for
 	//std::cout<<"forceX "<<accumalatedX<<"\n";
 	//std::cout<<"----"<<"\n";
 	//update force
-	force[0] = force[0]+accumalatedX*dt;
-	force[1] = force[1]+accumalatedY*dt;
+	force[0] = force[0]+accumalatedX*dt*0.01;
+	force[1] = force[1]+accumalatedY*dt*0.01;
 	//std::cout<<"forceX "<<force[0]<<"\n";
 }
 
