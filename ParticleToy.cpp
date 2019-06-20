@@ -14,6 +14,7 @@ extern void dens_step ( int N, float * x, float * x0, float * u, float * v, floa
 	float dt, float* grid, Vector2f &genForce);
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, 
 	float dt, float* grid, Vector2f &genForce);
+extern void acc_step (int N, float * u, float * v, float* grid, Vector2f &genForce);
 static int N, dvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
@@ -93,9 +94,9 @@ static void body_step(RigidBody * rb, float dt) {
 	rb->_force = genForce;
 	rb->_center[0] = rb->_center[0] + (rb->_velocity[0] * dt);
 	rb->_center[1] = rb->_center[1] + (rb->_velocity[1] * dt);
-	rb->_velocity[0] = rb->_velocity[0] + ((rb->_force[0] / rb->_mass) * dt);
-	rb->_velocity[1] = rb->_velocity[1] + ((rb->_force[1] / rb->_mass) * dt);
-	//std::cout<<"x "<<rb->_center[0]<< " y "<<rb->_center[1]<<"\n";
+	rb->_velocity[0] = 0.9*rb->_velocity[0] + ((rb->_force[0] / rb->_mass) * dt);
+	rb->_velocity[1] = 0.9*rb->_velocity[1] + ((rb->_force[1] / rb->_mass) * dt);
+	//std::cout<<"vel "<<rb->_velocity[0]<< " fo "<<rb->_force[0]<<"\n";
 }
 
 static void VoxelizeRigidBody(RigidBody * rb, float * grid) {
@@ -268,8 +269,6 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
 	if ( mouse_down[0] ) {
-
-
 		auto dirX = mx-omx;
 		auto dirY = omy-my;
 		auto mouseX = mx/(float)win_x;
@@ -280,14 +279,17 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 
 		auto length = std::sqrt(std::pow(disX,2.0) + std::pow(disY,2.0));
 
-		genForce[0] = disX/length*0.001f;
-		genForce[1] = disY/length*0.001f;
+		genForce[0] = disX/length*0.01f;
+		genForce[1] = disY/length*0.01f;
+
+				
 	}
 
 	if ( mouse_down[2] ) {
-		d[IX(i,j)] = source;
+		
 		u[IX(i,j)] = force * (mx-omx);
 		v[IX(i,j)] = force * (omy-my);
+		d[IX(i,j)] = source;
 	}
 
 	omx = mx;
@@ -353,6 +355,8 @@ static void idle_func ( void )
 	get_from_UI ( dens_prev, u_prev, v_prev, grid );
 	// voxelize current rb, without moving it yet
 	VoxelizeRigidBody(rb, grid);
+	// accumulate forces on body
+	//acc_step(N, u, v, grid, genForce); 
 	// actually move the body using euler solver	
 	body_step(rb, dt);
 	// use voxelized rb and its implied force in fluid solver

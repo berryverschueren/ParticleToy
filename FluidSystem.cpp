@@ -88,28 +88,56 @@ void diffuse ( int N, int b, float * x, float * x0, float diff, float dt, float 
 	lin_solve ( N, b, x, x0, a, 1+4*a, grid );
 }
 
+void clear_bnd(int N, float * grid, float * d){
+	int i,j;
+	FOR_EACH_CELL
+		if(d[IX(i,j)]>1){
+			if(grid[IX(i,j)==1]){
+				d[IX(i,j)]=0;
+			}
+		}
+	END_FOR
+}
+
 void advect ( int N, int b, float * d, float * d0, float * u, float * v, float dt, float * grid, Vector2f &genForce)
 {
 	int i, j, i0, j0, i1, j1;
 	float x, y, s0, t0, s1, t1, dt0;
 
 	dt0 = dt*N;
-	
 	FOR_EACH_CELL
 		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1) {
 			if(grid[IX(i,j)] == 2){
+				if(grid[IX(i,j-1)] ==1 ){
+					d0[IX(i,j-2)] += d[IX(i,j)]/2; 
+				} else if(grid[IX(i,j+1)] ==1 ){
+					d0[IX(i,j+2)] += d[IX(i,j)]/2; 
+				} else if(grid[IX(i-1,j)] ==1 ){
+					d0[IX(i-2,j)] += d[IX(i,j)]/2; 
+				} else if(grid[IX(i+1,j)] ==1 ){
+					d0[IX(i+2,j)] += d[IX(i,j)]/2; 
+				} 
+			}
+			d[IX(i,j)] = 0;
+		}
+	END_FOR
+	
+	FOR_EACH_CELL
+		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1) {
+			/*
+			if(grid[IX(i,j)] == 2){
 				
 				if(grid[IX(i,j-1)] ==1 ){
-					d[IX(i,j-1)] += d[IX(i,j)]; 
+					d[IX(i,j-2)] += d[IX(i,j)]/2; 
 				} else if(grid[IX(i,j+1)] ==1 ){
-					d[IX(i,j+1)] += d[IX(i,j)]; 
+					d[IX(i,j+2)] += d[IX(i,j)]/2; 
 				} else if(grid[IX(i-1,j)] ==1 ){
-					d[IX(i-1,j)] += d[IX(i,j)]; 
+					d[IX(i-2,j)] += d[IX(i,j)]/2; 
 				} else if(grid[IX(i+1,j)] ==1 ){
-					d[IX(i+1,j)] += d[IX(i,j)]; 
+					d[IX(i+2,j)] += d[IX(i,j)]/2; 
 				} 
 				d[IX(i,j)] = 0;
-			}
+			}*/
 		} else {
 			x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
 
@@ -143,7 +171,7 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			auto aVal = 0.0f, cVal = 0.0f, eVal = 0.0f, fVal = 0.0f;
 
 			// compute force from object (for either u or v)
-			auto additionFromGrid = b == 1 ? -genForce[0]*10 : -genForce[1]*10;
+			auto additionFromGrid = b == 1 ? genForce[0] : genForce[1];
 
 			// if interpolation cell is inside, use the participation value
 			aVal = a ? additionFromGrid : d0[IX(i0,j0)];
@@ -219,5 +247,22 @@ void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
 	advect ( N, 1, u, u0, u0, v0, dt, grid, genForce); 
 	advect ( N, 2, v, v0, u0, v0, dt, grid, genForce);
 	project ( N, u, v, u0, v0, grid);
+}
+
+void acc_step(int N, float * u, float * v, float * grid, Vector2f &force){
+	int i,j;
+	float accumalatedX = 0.0f, accumalatedY = 0.0f;
+	FOR_EACH_CELL
+		if(grid[IX(i,j)]==1){
+			accumalatedX += -u[IX(i,j)];
+			accumalatedY += -v[IX(i,j)];
+		}
+	END_FOR
+	//std::cout<<"forceX "<<force[0]<<"\n";
+	//std::cout<<"----"<<"\n";
+	//update force
+	force[0] = force[0]+accumalatedX*0.001;
+	force[1] = force[1]+accumalatedY*0.001;
+	//std::cout<<"forceX "<<force[0]<<"\n";
 }
 
