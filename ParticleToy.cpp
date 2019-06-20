@@ -130,7 +130,7 @@ static void body_step(RigidBody * rb, float dt) {
 	//printf("torq: %g, %g, %g", torq[0], torq[1], torq[2]);
 
 	rb->_angularVelocity = Vector3f(torq[0] * dt, torq[1] * dt, torq[2] * dt);
-
+	std::cout<<rb->_orientation<<"\n";
 	
 	// printf("%g, %g, %g\n", rb->_orientation(0,0), rb->_orientation(0,1), rb->_orientation(0,2));
 	// printf("%g, %g, %g\n", rb->_orientation(1,0), rb->_orientation(1,1), rb->_orientation(1,2));

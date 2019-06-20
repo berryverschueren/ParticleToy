@@ -183,8 +183,8 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 			} 
 			// if one of them is inside, take special care
 			else {
-				d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
-						s1*(t0*eVal+t1*fVal);
+				//d[IX(i,j)] = s0*(t0*aVal+t1*cVal)+
+				//		s1*(t0*eVal+t1*fVal);
 				//std::cout<<"testd1 "<<d[IX(i,j)]<<"\n";
 				d[IX(i,j)] = (aVal+cVal+eVal+fVal)/4;	
 				//std::cout<<"testd2 "<<d[IX(i,j)]<<"\n";
@@ -306,6 +306,16 @@ void acc_step(int N, float * u, float * v, float * grid, float dt, Vector2f &for
 		}
 	END_FOR
 
+
+	if(torq[0]>0.99f){
+		torq[0] = 0.99f;
+	}
+	if(torq[1]>0.99f){
+		torq[1] = 0.99f;
+	}
+	if(torq[2]>0.99f){
+		torq[2] = 0.99f;
+	}
 	// upper right corner of init rb
 	
 	// some force
