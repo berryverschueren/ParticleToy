@@ -229,71 +229,42 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 	
 
 		if(grid[IX(i,j)]==1 || grid[IX(i,j)]==2){
-			//in object
-			//is force
 			/*
-			int xxx = (int)xx;
-			int yyy = (int)yy;
-			//if((xxx>0||yyy>0) && grid[IX(i,j)]==2)std::cout<<xxx<<" "<<yyy<<"\n";
-
-			if(!t){
-				//std::cout<<"test"<<xxx<<"\n";
-				if(grid[IX(i,j)]==2){
-					if(xxx!=0||yyy!=0){	
-						d[IX(i+xxx,j+yyy)] += d[IX(i,j)];
-						//std::cout<<"test"<<xxx<<"\n";
-						d[IX(i,j)] = 0;
-					}else{
-						bool border = false;
-						int c=0;
-						if(d[IX(i,j)] != 0){
-							
-							while(!border){
-
-								if(grid[IX(i-c,j)]==1){
-									border = true;
-									c++;
-									d[IX(i-c,j)] += d[IX(i,j)]; 
-									d[IX(i,j)] = 0;
-								}
-								c++;
-								//std::cout<<"d "<<c<<"\n";
-								
-								//std::cout<<"c "<<c<<" d "<<d[IX(i-c,j)]<<"\n";
-								//d[IX(i-c+1,j)] = 0;
-								//std::cout<<xxx<<"\n";
-								/*
-								if(grid[IX(i+xxx,j)]==0){
-									d[IX(i+xxx,j)] = d[IX(i,j)];
-									std::cout<<"1 "<<xxx<<"\n";
-									border = true;
-								}else if(grid[IX(i-xxx,j)]==0){
-									d[IX(i-xxx,j)] = d[IX(i,j)];
-									std::cout<<"2 "<<xxx<<"\n";
-									border = true;
-								}else if(grid[IX(i,j+xxx)]==0){
-									d[IX(i,j+xxx)] = d[IX(i,j)];
-									std::cout<<"3 "<<xxx<<"\n";
-									border = true;
-								}else if(grid[IX(i,j-xxx)]==0){
-									d[IX(i,j+xxx)] = d[IX(i,j)];
-									std::cout<<"4 "<<xxx<<"\n";
-									border = true;
-								}else{
-									xxx++;
-								}	
-							}
-							//d[IX(i,j)] = 0;
-						}
-					}
-				}
-			}
-			*/
-			
-			
-			
-		}else{
 			x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
+
+			if (x<0.5f) x=0.5f; 
+			if (x>N+0.5f) x=N+0.5f; 
+			i0=(int)x; i1=i0+1;
+			
+			if (y<0.5f) y=0.5f;
+			if (y>N+0.5f) y=N+0.5f; 
+			j0=(int)y; j1=j0+1;
+
+			s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+
+			if(grid[IX(i-1,j)]==0){
+				d[IX(i-1,j)] += s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
+						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+			}else if(grid[IX(i+1,j)]==0){
+				d[IX(i+1,j)] += s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
+						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+			}else if(grid[IX(i,j-1)]==0){
+				d[IX(i,j-1)] += s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
+						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+			}else if(grid[IX(i,j+1)]==0){
+				d[IX(i,j+1)] += s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
+						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
+			}*/
+						
+		}else{
+			
+
+			x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
+
+			if(x!=i &&y!=j){ 
+				//std::cout<<"i "<<i<<" j "<<j<<"\n";
+				//std::cout<<"x "<<x<<" y "<<y<<"\n";
+			}
 
 			if (x<0.5f) x=0.5f; 
 			if (x>N+0.5f) x=N+0.5f; 
@@ -307,7 +278,6 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 
 			d[IX(i,j)] = s0*(t0*d0[IX(i0,j0)]+t1*d0[IX(i0,j1)])+
 						s1*(t0*d0[IX(i1,j0)]+t1*d0[IX(i1,j1)]);
-			
 		}
 	
 	END_FOR
