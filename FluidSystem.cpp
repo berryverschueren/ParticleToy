@@ -216,9 +216,26 @@ void project ( int N, float * u, float * v, float * p, float * div, float * grid
 	set_bnd ( N, 1, u, grid ); set_bnd ( N, 2, v, grid );
 }
 
-void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid, float* grid_prev, Vector2f &genForce)
+// h and epsilon are constants control spatial discretion and small scale detail
+void vorticity_force ( int N, float * u, float * v, float dt, float eps )
+{
+    int i,j;
+    float h;
+    //eps = 1.0f;
+    h = 1.0f/N;
+    FOR_EACH_CELL
+            // calculate force for current position and velocity
+            float f = eps * h * pow(2, 0.5) * ( u[IX(i,j)] - v[IX(i,j)] );
+            // get current velocity += dt * force
+            u[IX(i,j)] += dt * f;
+            v[IX(i,j)] += dt * -f;
+    END_FOR
+}
+
+void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid, float* grid_prev, Vector2f &genForce, float eps)
 {
 	add_source ( N, x, x0, dt );
+    vorticity_force( N, u, v, dt, eps); // vorticity force added to u and v
 	SWAP ( x0, x ); 
 	diffuse ( N, 0, x, x0, diff, dt, grid);
 	SWAP ( x0, x ); 
@@ -226,7 +243,7 @@ void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff,
 }
 
 void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
- 	float dt, float * grid, Vector2f &genForce)
+ 	float dt, float * grid, Vector2f &genForce )
 {
 	add_source ( N, u, u0, dt ); 
 	add_source ( N, v, v0, dt );
