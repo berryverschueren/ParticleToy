@@ -17,7 +17,7 @@ extern void dens_step ( int N, float * x, float * x0, float * u, float * v, floa
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, 
 	float dt, float* grid, Vector2f &genForce);
 
-extern void acc_step (int N, float * u, float * v, float* grid, float dt, Vector2f &genForce);
+extern void acc_step (int N, float * u, float * v, float* grid, float dt, Vector2f &genForce, Vector2f center, Vector3f &torq);
 
 static int N, dvel;
 static float dt, diff, visc, force, source;
@@ -25,6 +25,7 @@ static float * u, * v, * u_prev, * v_prev;
 static float * dens, * dens_prev;
 static RigidBody * rb = new RigidBody(Vector2f(0.5f, 0.5f));
 static Vector2f genForce = Vector2f(0.0f, 0.0f);
+static Vector3f torq = Vector3f(0.0f, 0.0f, 0.0f);
 
 static int win_id;
 static int win_x, win_y;
@@ -33,6 +34,8 @@ static int omx, omy, mx, my;
 
 static float * grid, *grid_prev;
 static float eps;
+
+
 
 /*
   ----------------------------------------------------------------------
@@ -113,7 +116,7 @@ static void body_step(RigidBody * rb, float dt) {
 	auto test = w_star * rb->_orientation;
 	auto newOrientation = test * dt;
 	rb->_orientation += newOrientation;
-
+/*
 	// upper right corner of init rb
 	auto loc = Vector3f(0.5f + (10.f/64), 0.5f + (10.f/64), 0.0f);
 	// some force
@@ -123,7 +126,7 @@ static void body_step(RigidBody * rb, float dt) {
 	auto relPos = Vector3f(rb->_center[0] - loc[0], rb->_center[1] - loc[1], 0.0f);
 	auto torq = relPos.cross(forc);
 	//auto torq = Vector2f(relPos[0] * forc[0], relPos[1] * forc[1]);
-
+*/
 	//printf("torq: %g, %g, %g", torq[0], torq[1], torq[2]);
 
 	rb->_angularVelocity = Vector3f(torq[0] * dt, torq[1] * dt, torq[2] * dt);
@@ -376,8 +379,6 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
 	if ( mouse_down[0] ) {
-		auto dirX = mx-omx;
-		auto dirY = omy-my;
 		auto mouseX = mx/(float)win_x;
 		auto mouseY = (win_y-my)/(float)win_y;
 
@@ -386,16 +387,16 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 
 		auto length = std::sqrt(std::pow(disX,2.0) + std::pow(disY,2.0));
 
-		genForce[0] = disX/length*0.01f;
-		genForce[1] = disY/length*0.01f;
-
+//		genForce[0] = disX/length*0.01f;
+//		genForce[1] = disY/length*0.01f;
+		u[IX(i,j)] = force * (mx-omx);
+		v[IX(i,j)] = force * (omy-my);	
 				
 	}
 
 	if ( mouse_down[2] ) {
 		
-		u[IX(i,j)] = force * (mx-omx);
-		v[IX(i,j)] = force * (omy-my);
+		
 		d[IX(i,j)] = source;
 	}
 
@@ -463,7 +464,7 @@ static void idle_func ( void )
 	// voxelize current rb, without moving it yet
 	VoxelizeRigidBody(rb, grid, grid_prev);
 	// accumulate forces on body
-	acc_step(N, u, v, grid, dt, genForce); 
+	acc_step(N, u, v, grid, dt, genForce, rb->_center, torq); 
 	// actually move the body using euler solver
 	body_step(rb, dt);
 	// use voxelized rb and its implied force in fluid solver
@@ -479,8 +480,8 @@ static void display_func ( void )
 	pre_display ();
 
 		if ( dvel ) { 
-			draw_velocity ();
-			//draw_rigidBody(grid, true);
+			//draw_velocity ();
+			draw_rigidBody(grid, true);
 		}
 		else {		
 			draw_density ();

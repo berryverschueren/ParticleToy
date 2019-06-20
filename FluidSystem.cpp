@@ -109,13 +109,17 @@ void advect ( int N, int b, float * d, float * d0, float * u, float * v, float d
 		if (grid[IX(i,j)] == 2 || grid[IX(i,j)] == 1) {
 			if(grid[IX(i,j)] == 2){
 				if(grid[IX(i,j-1)] ==1 ){
-					d0[IX(i,j-2)] += d[IX(i,j)]; 
+					if(grid[IX(i,j-2)] ==0 ){
+						d0[IX(i,j-2)] += d[IX(i,j)];
+					} 
 				} else if(grid[IX(i,j+1)] ==1 ){
-					d0[IX(i,j+2)] += d[IX(i,j)]; 
+					if(grid[IX(i,j+2)]==0){
+						d0[IX(i,j+2)] += d[IX(i,j)]; 
+					}
 				} else if(grid[IX(i-1,j)] ==1 ){
-					d0[IX(i-2,j)] += d[IX(i,j)]; 
+					if(grid[IX(i-2,j)] ==0)	d0[IX(i-2,j)] += d[IX(i,j)]; 
 				} else if(grid[IX(i+1,j)] ==1 ){
-					d0[IX(i+2,j)] += d[IX(i,j)]; 
+					if(grid[IX(i+2,j)] ==0) d0[IX(i+2,j)] += d[IX(i,j)]; 
 				} 
 			}
 			d[IX(i,j)] = 0;
@@ -235,7 +239,7 @@ void vorticity_force ( int N, float * u, float * v, float dt, float eps )
 void dens_step ( int N, float * x, float * x0, float * u, float * v, float diff, float dt, float* grid, float* grid_prev, Vector2f &genForce, float eps)
 {
 	add_source ( N, x, x0, dt );
-    vorticity_force( N, u, v, dt, eps); // vorticity force added to u and v
+    //vorticity_force( N, u, v, dt, eps); // vorticity force added to u and v
 	SWAP ( x0, x ); 
 	diffuse ( N, 0, x, x0, diff, dt, grid);
 	SWAP ( x0, x ); 
@@ -259,9 +263,10 @@ void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc,
 	project ( N, u, v, u0, v0, grid);
 }
 
-void acc_step(int N, float * u, float * v, float * grid, float dt, Vector2f &force){
+void acc_step(int N, float * u, float * v, float * grid, float dt, Vector2f &force, Vector2f center, Vector3f &torq){
 	int i,j;
-	float accumalatedX = 0.0f, accumalatedY = 0.0f;
+	float accumalatedX = 0.0f, accumalatedY = 0.0f; 
+	torq = Vector3f(0.0f,0.0f,0.0f);
 	FOR_EACH_CELL
 		if(grid[IX(i,j)]==1){
 			float accX=0.0f, accY=0.0f;
@@ -272,28 +277,49 @@ void acc_step(int N, float * u, float * v, float * grid, float dt, Vector2f &for
 				accY += v[IX(i-1,j)];
 			}
 			if(grid[IX(i+1,j)]==0){
+				div++;
 				accX += u[IX(i+1,j)];
 				accY += v[IX(i+1,j)];
 			}
 			if(grid[IX(i,j-1)]==0){
+				div++;
 				accX += u[IX(i,j-1)];
 				accY += v[IX(i,j-1)];
 			}
 			if(grid[IX(i,j+1)]==0){
+				div++;
 				accX += u[IX(i,j+1)];
 				accY += v[IX(i,j+1)];
 			}
 			if(div!=0){
-				accumalatedX += accX/div;
-				accumalatedY += accY/div;
+				accX = accX/div;
+				accY = accY/div;
+				accumalatedX += accX;
+				accumalatedY += accY;
 			}
+			auto forc = Vector3f(accX*6, accY*6, 0.0f);
+
+			auto loc = Vector3f(i/64.f, j/64.f, 0.0f);
+
+			auto relPos = Vector3f(loc[0]- center[0], loc[1] - center[1] , 0.0f);
+			torq += relPos.cross(forc);
 		}
 	END_FOR
+
+	// upper right corner of init rb
+	
+	// some force
+	
+	
+	// new angular velocity == sum of (relative pos * force @ this pos) --> vec2f result (add 3f smt)
+
+
+
 	//std::cout<<"forceX "<<accumalatedX<<"\n";
 	//std::cout<<"----"<<"\n";
 	//update force
-	force[0] = force[0]+accumalatedX*dt*0.01;
-	force[1] = force[1]+accumalatedY*dt*0.01;
+	//force[0] = force[0]+accumalatedX*dt*0.01;
+	//force[1] = force[1]+accumalatedY*dt*0.01;
 	//std::cout<<"forceX "<<force[0]<<"\n";
 }
 
