@@ -144,3 +144,21 @@ void RunSimulation()
 		DisplayBodies();
 	}
 }
+
+
+
+
+
+void midpointSolver(ParticleSystem *particleSystem, float dt) {
+	auto state = particleSystem->getState();
+	auto derivative1 = particleSystem->derivEval();
+	derivative1 = vectorTimesScalar(derivative1, (dt * 0.5f));
+	auto midpoint = vectorAddition(state, derivative1);
+	particleSystem->setState(midpoint);
+	auto derivative2 = particleSystem->derivEval();
+	derivative2 = vectorTimesScalar(derivative2, dt);
+	auto newState = vectorAddition(state, derivative2);
+
+    newState = particleSystem->simpleCollision(newState);
+	particleSystem->setState(newState);
+}
