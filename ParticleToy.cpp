@@ -19,7 +19,7 @@ extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, floa
 
 extern void acc_step (int N, float * u, float * v, float* grid, float dt, Vector2f &genForce, Vector2f center, Vector3f &torq);
 
-static int N, dvel;
+static int N, dvel, ovel, lvel;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
 static float * dens, * dens_prev;
@@ -116,26 +116,7 @@ static void body_step(RigidBody * rb, float dt) {
 	auto test = w_star * rb->_orientation;
 	auto newOrientation = test * dt;
 	rb->_orientation += newOrientation;
-/*
-	// upper right corner of init rb
-	auto loc = Vector3f(0.5f + (10.f/64), 0.5f + (10.f/64), 0.0f);
-	// some force
-	auto forc = Vector3f(10.f, 5.f, 0.0f);
-	
-	// new angular velocity == sum of (relative pos * force @ this pos) --> vec2f result (add 3f smt)
-	auto relPos = Vector3f(rb->_center[0] - loc[0], rb->_center[1] - loc[1], 0.0f);
-	auto torq = relPos.cross(forc);
-	//auto torq = Vector2f(relPos[0] * forc[0], relPos[1] * forc[1]);
-*/
-	//printf("torq: %g, %g, %g", torq[0], torq[1], torq[2]);
-
 	rb->_angularVelocity = Vector3f(torq[0] * dt, torq[1] * dt, torq[2] * dt);
-	std::cout<<rb->_orientation<<"\n";
-	
-	// printf("%g, %g, %g\n", rb->_orientation(0,0), rb->_orientation(0,1), rb->_orientation(0,2));
-	// printf("%g, %g, %g\n", rb->_orientation(1,0), rb->_orientation(1,1), rb->_orientation(1,2));
-	// printf("%g, %g, %g\n", rb->_orientation(2,0), rb->_orientation(2,1), rb->_orientation(2,2));
-	// printf("----\n");
 }
 
 static void VoxelizeRigidBody(RigidBody * rb, float * grid, float * grid_prev) {
@@ -292,6 +273,30 @@ static void draw_velocity ( void )
 		}
 
 	glEnd ();
+
+	if ( ovel ) {  	
+		glBegin( GL_QUADS );
+
+			for ( i=0 ; i<=N ; i++ ) {
+			x = (i-0.5f)*h;
+			for ( j=0 ; j<=N ; j++ ) {
+				y = (j-0.5f)*h;
+
+				auto color = 0.2f * g[IX(i,j)];
+				if(t){
+					glColor3f(0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)], 0.3f * g[IX(i,j)]);
+				}else{
+					glColor3f(0.3f * g[IX(i,j)], 0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)]);
+				}
+				glVertex2f ( x, y );
+				glVertex2f ( x+h, y );
+				glVertex2f ( x+h, y+h );
+				glVertex2f ( x, y+h );
+			}
+		}
+
+		glEnd();
+	}
 }
 
 static void draw_density ( void )
@@ -321,36 +326,30 @@ static void draw_density ( void )
 		}
 
 	glEnd ();
-}
 
-static void draw_rigidBody(float* g, bool t) {
-	
-	int i, j;
-	float x, y, h;
+	if ( ovel ) {  	
+		glBegin( GL_QUADS );
 
-	h = 1.0f/N;
-  	
-	glBegin( GL_QUADS );
+			for ( i=0 ; i<=N ; i++ ) {
+			x = (i-0.5f)*h;
+			for ( j=0 ; j<=N ; j++ ) {
+				y = (j-0.5f)*h;
 
-  	for ( i=0 ; i<=N ; i++ ) {
-		x = (i-0.5f)*h;
-		for ( j=0 ; j<=N ; j++ ) {
-			y = (j-0.5f)*h;
-
-			auto color = 0.2f * g[IX(i,j)];
-			if(t){
-				glColor3f(0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)], 0.3f * g[IX(i,j)]);
-			}else{
-				glColor3f(0.3f * g[IX(i,j)], 0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)]);
+				auto color = 0.2f * g[IX(i,j)];
+				if(t){
+					glColor3f(0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)], 0.3f * g[IX(i,j)]);
+				}else{
+					glColor3f(0.3f * g[IX(i,j)], 0.2f * g[IX(i,j)], 0.1f * g[IX(i,j)]);
+				}
+				glVertex2f ( x, y );
+				glVertex2f ( x+h, y );
+				glVertex2f ( x+h, y+h );
+				glVertex2f ( x, y+h );
 			}
-			glVertex2f ( x, y );
-			glVertex2f ( x+h, y );
-			glVertex2f ( x+h, y+h );
-			glVertex2f ( x, y+h );
 		}
-	}
 
-  glEnd();
+		glEnd();
+	}
 }
 
 /*
@@ -378,25 +377,22 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 
 	if ( i<1 || i>N || j<1 || j>N ) return;
 
-	if ( mouse_down[0] ) {
-		auto mouseX = mx/(float)win_x;
-		auto mouseY = (win_y-my)/(float)win_y;
-
-		auto disX = mouseX - rb->_center[0];
-		auto disY = mouseY - rb->_center[1];
-
-		auto length = std::sqrt(std::pow(disX,2.0) + std::pow(disY,2.0));
-
-//		genForce[0] = disX/length*0.01f;
-//		genForce[1] = disY/length*0.01f;
-		u[IX(i,j)] = force * (mx-omx);
-		v[IX(i,j)] = force * (omy-my);	
-				
+	if ( mouse_down[0] ) {		
+		if ( lvel ) {
+			auto mouseX = mx/(float)win_x;
+			auto mouseY = (win_y-my)/(float)win_y;
+			auto disX = mouseX - rb->_center[0];
+			auto disY = mouseY - rb->_center[1];
+			auto length = std::sqrt(std::pow(disX,2.0) + std::pow(disY,2.0));
+			genForce[0] = disX/length*0.01f;
+			genForce[1] = disY/length*0.01f;
+		} else {
+			u[IX(i,j)] = force * (mx-omx);
+			v[IX(i,j)] = force * (omy-my);	
+		}
 	}
 
 	if ( mouse_down[2] ) {
-		
-		
 		d[IX(i,j)] = source;
 	}
 
@@ -430,6 +426,16 @@ static void key_func ( unsigned char key, int x, int y )
 		case 'v':
 		case 'V':
 			dvel = !dvel;
+			break;
+
+		case 'o':
+		case 'O':
+			ovel = !ovel;
+			break;
+
+		case 'l':
+		case 'L':
+			lvel = !lvel;
 			break;
 	}
 }
@@ -480,12 +486,10 @@ static void display_func ( void )
 	pre_display ();
 
 		if ( dvel ) { 
-			//draw_velocity ();
-			draw_rigidBody(grid, true);
+			draw_velocity ();
 		}
 		else {		
 			draw_density ();
-			//draw_rigidBody(grid_prev, false);
 		}
 
 	post_display ();
@@ -532,21 +536,6 @@ static void open_glut_window ( void )
 int main ( int argc, char ** argv )
 {
 	glutInit ( &argc, argv );
-
-/*
-	if ( argc != 1 && argc != 7 ) {
-		fprintf ( stderr, "usage : %s N dt diff visc force source epsilon h\n", argv[0] );
-		fprintf ( stderr, "where:\n" );\
-		fprintf ( stderr, "\t N       : grid resolution\n" );
-		fprintf ( stderr, "\t dt      : time step\n" );
-		fprintf ( stderr, "\t diff    : diffusion rate of the density\n" );
-		fprintf ( stderr, "\t visc    : viscosity of the fluid\n" );
-		fprintf ( stderr, "\t force   : scales the mouse movement that generate a force\n" );
-		fprintf ( stderr, "\t source  : amount of density that will be deposited\n" );
-		fprintf ( stderr, "\t epsilon : small scale detail control \n" );
-		exit ( 1 );
-	}
-*/
     if ( argc == 1 ) {
         N = 64;
         dt = 0.1f;
@@ -570,11 +559,15 @@ int main ( int argc, char ** argv )
 	printf ( "\n\nHow to use this demo:\n\n" );
 	printf ( "\t Add densities with the right mouse button\n" );
 	printf ( "\t Add velocities with the left mouse button and dragging the mouse\n" );
+	printf ( "\t Toggle object interaction with the 'l' key, then use the left mouse button and dragging the mouse\n" );
 	printf ( "\t Toggle density/velocity display with the 'v' key\n" );
+	printf ( "\t Toggle object display with the 'o' key\n" );
 	printf ( "\t Clear the simulation by pressing the 'c' key\n" );
 	printf ( "\t Quit by pressing the 'q' key\n" );
 
 	dvel = 0;
+	ovel = 0;
+	lvel = 0;
 
 	if ( !allocate_data () ) exit ( 1 );
 	clear_data ();
