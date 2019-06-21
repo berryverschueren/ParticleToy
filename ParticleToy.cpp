@@ -17,9 +17,9 @@ extern void dens_step ( int N, float * x, float * x0, float * u, float * v, floa
 extern void vel_step ( int N, float * u, float * v, float * u0, float * v0, float visc, 
 	float dt, float* grid, Vector2f &genForce);
 
-extern void acc_step (int N, float * u, float * v, float* grid, float dt, Vector2f &genForce, Vector2f center, Vector3f &torq);
+extern void acc_step (int N, float * u, float * v, float* grid, float dt, Vector2f &genForce, Vector2f center, Vector3f &torq, int fluidSolid);
 
-static int N, dvel, ovel, lvel;
+static int N, dvel, ovel, lvel, rvel, fluidSolid, solidFluid;
 static float dt, diff, visc, force, source;
 static float * u, * v, * u_prev, * v_prev; 
 static float * dens, * dens_prev;
@@ -95,6 +95,7 @@ static int allocate_data ( void )
 
 static void body_step(RigidBody * rb, float dt) {
 	rb->ResetForce();
+
 	rb->_force = genForce;
 	rb->_center = rb->_center + ((rb->_velocity) * dt);
 	rb->_velocity = 0.9*rb->_velocity + ((rb->_force / rb->_mass) * dt);
@@ -116,7 +117,11 @@ static void body_step(RigidBody * rb, float dt) {
 	auto test = w_star * rb->_orientation;
 	auto newOrientation = test * dt;
 	rb->_orientation += newOrientation;
-	rb->_angularVelocity = Vector3f(torq[0] * dt, torq[1] * dt, torq[2] * dt);
+	if(rvel){
+		rb->_angularVelocity = Vector3f(torq[0] * dt, torq[1] * dt, torq[2] * dt);
+	}else{
+		rb->_angularVelocity = Vector3f(0.0f,0.0f,0.0f);
+	}
 }
 
 static void VoxelizeRigidBody(RigidBody * rb, float * grid, float * grid_prev) {
@@ -374,8 +379,15 @@ static void get_from_UI ( float * d, float * u, float * v, float * grid )
 			auto disX = mouseX - rb->_center[0];
 			auto disY = mouseY - rb->_center[1];
 			auto length = std::sqrt(std::pow(disX,2.0) + std::pow(disY,2.0));
-			genForce[0] = disX/length*0.01f;
-			genForce[1] = disY/length*0.01f;
+
+			if(solidFluid){
+				genForce[0] = disX/length*0.01f;
+				genForce[1] = disY/length*0.01f;
+			}else{
+				genForce[0] = disX/length*0.01f *4;
+				genForce[1] = disY/length*0.01f *4;
+			}
+			
 		} else {
 			u[IX(i,j)] = force * (mx-omx);
 			v[IX(i,j)] = force * (omy-my);	
@@ -418,14 +430,54 @@ static void key_func ( unsigned char key, int x, int y )
 			dvel = !dvel;
 			break;
 
-		case 'o':
-		case 'O':
+		case 'b':
+		case 'B':
 			ovel = !ovel;
 			break;
 
 		case 'l':
 		case 'L':
 			lvel = !lvel;
+			break;
+
+
+
+		case 'i':
+		case 'I':
+			if(eps != 2.5){
+				eps = 2.5f;		
+			}else{
+				eps = 0.5f;
+			}
+			break;
+
+		case 'o':
+		case 'O':
+			//ob fluid
+			solidFluid = !solidFluid;
+			break;
+
+		case 'p':
+		case 'P':
+			//fluid solid
+			fluidSolid = !fluidSolid;
+			break;
+
+		case 'K':
+		case 'k':
+			//rot
+			rvel = !rvel;
+			break;
+
+		case 'm':
+		case 'M':
+			//big
+			if(rb->_width != 40.0f/N){
+				rb->_width = 40.0f/N;
+			}else{
+				rb->_width = 10.0f/N;
+			}
+			
 			break;
 	}
 }
@@ -460,7 +512,7 @@ static void idle_func ( void )
 	// voxelize current rb, without moving it yet
 	VoxelizeRigidBody(rb, grid, grid_prev);
 	// accumulate forces on body
-	acc_step(N, u, v, grid, dt, genForce, rb->_center, torq); 
+	acc_step(N, u, v, grid, dt, genForce, rb->_center, torq, fluidSolid); 
 	// actually move the body using euler solver
 	body_step(rb, dt);
 	// use voxelized rb and its implied force in fluid solver
@@ -533,7 +585,7 @@ int main ( int argc, char ** argv )
         visc = 0.0f;
         force = 5.0f;
         source = 100.0f;
-        eps = 1.0f;
+        eps = 0.0f;
         fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g epsilon=%g\n",
                   N, dt, diff, visc, force, source, eps );
     } else {
@@ -558,6 +610,10 @@ int main ( int argc, char ** argv )
 	dvel = 0;
 	ovel = 0;
 	lvel = 0;
+	rvel = 0;
+	solidFluid = 1;
+	fluidSolid = 0;
+
 
 	if ( !allocate_data () ) exit ( 1 );
 	clear_data ();

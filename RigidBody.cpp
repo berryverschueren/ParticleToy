@@ -24,7 +24,7 @@ void RigidBody::Reset() {
 	_velocity = Vector2f(0.0f, 0.0f);
 	_force = Vector2f(0.0f, 0.0f);
 	_mass = 1.0f;
-	_width = 40.0f/64;
+	_width = 10.0f/64;
 	_height = 10.0f/64;
 
 	_orientation = MatrixXf::Zero(3,3);
