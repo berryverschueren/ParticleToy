@@ -474,8 +474,10 @@ static void key_func ( unsigned char key, int x, int y )
 			//big
 			if(rb->_width != 40.0f/N){
 				rb->_width = 40.0f/N;
+				rb->_mass = (rb->_width*64)*(rb->_height*64)/100;
 			}else{
 				rb->_width = 10.0f/N;
+				rb->_mass = (rb->_width*64)*(rb->_height*64)/100;
 			}
 			
 			break;
