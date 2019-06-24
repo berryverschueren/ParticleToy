@@ -1,4 +1,5 @@
 // project 2
+#include "imageio.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
@@ -31,6 +32,8 @@ static int win_id;
 static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
+static int dump_frames;
+static int frame_number;
 
 static float * grid, *grid_prev;
 static float eps;
@@ -252,6 +255,26 @@ static void pre_display ( void )
 
 static void post_display ( void )
 {
+	// Write frames if necessary.
+	if (dump_frames) {
+		const int FRAME_INTERVAL = 4;
+		if ((frame_number % FRAME_INTERVAL) == 0) {
+			const unsigned int w = glutGet(GLUT_WINDOW_WIDTH);
+			const unsigned int h = glutGet(GLUT_WINDOW_HEIGHT);
+			unsigned char * buffer = (unsigned char *) malloc(w * h * 4 * sizeof(unsigned char));
+			if (!buffer)
+				exit(-1);
+			// glRasterPos2i(0, 0);
+			glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+			static char filename[80];
+			sprintf(filename, "../snapshots/img%.5i.png", frame_number / FRAME_INTERVAL);
+			printf("Dumped %s.\n", filename);
+			saveImageRGBA(filename, buffer, w, h);
+			
+			free(buffer);
+		}
+	}
+	frame_number++;
 	glutSwapBuffers ();
 }
 
@@ -419,6 +442,11 @@ static void key_func ( unsigned char key, int x, int y )
 			clear_data ();
 			break;
 
+		case 'd':
+		case 'D':
+		dump_frames = !dump_frames;
+		break;
+
 		case 'q':
 		case 'Q':
 			free_data ();
@@ -445,9 +473,9 @@ static void key_func ( unsigned char key, int x, int y )
 		case 'i':
 		case 'I':
 			if(eps != 2.5){
-				eps = 2.5f;		
+				eps = 1.5f;		
 			}else{
-				eps = 0.5f;
+				eps = 0.1f;
 			}
 			break;
 
@@ -587,7 +615,7 @@ int main ( int argc, char ** argv )
         visc = 0.0f;
         force = 5.0f;
         source = 100.0f;
-        eps = 0.0f;
+        eps = 0.1f;
         fprintf ( stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g force = %g source=%g epsilon=%g\n",
                   N, dt, diff, visc, force, source, eps );
     } else {
@@ -615,7 +643,8 @@ int main ( int argc, char ** argv )
 	rvel = 0;
 	solidFluid = 1;
 	fluidSolid = 0;
-
+	dump_frames = 0;
+	frame_number = 0;
 
 	if ( !allocate_data () ) exit ( 1 );
 	clear_data ();
