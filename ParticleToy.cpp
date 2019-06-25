@@ -632,8 +632,13 @@ int main ( int argc, char ** argv )
 	printf ( "\t Add densities with the right mouse button\n" );
 	printf ( "\t Add velocities with the left mouse button and dragging the mouse\n" );
 	printf ( "\t Toggle object interaction with the 'l' key, then use the left mouse button and dragging the mouse\n" );
+	printf ( "\t Toggle intensity of mouse interaction with the 'o' key\n" );
+	printf ( "\t Toggle rigid body rotation with the 'k' key\n" );
 	printf ( "\t Toggle density/velocity display with the 'v' key\n" );
-	printf ( "\t Toggle object display with the 'o' key\n" );
+	printf ( "\t Toggle object display with the 'b' key\n" );
+	printf ( "\t Toggle vorticity intensity with the 'i' key\n" );
+	printf ( "\t Toggle fluid-solid interaction with the 'p' key\n" );
+	printf ( "\t Toggle large object with the 'm' key\n" );
 	printf ( "\t Clear the simulation by pressing the 'c' key\n" );
 	printf ( "\t Quit by pressing the 'q' key\n" );
 
