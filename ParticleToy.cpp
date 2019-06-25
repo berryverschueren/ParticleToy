@@ -653,7 +653,6 @@ int main ( int argc, char ** argv )
 
 	if ( !allocate_data () ) exit ( 1 );
 	clear_data ();
-	//VoxelizeRigidBody(centerX, centerY, width, height);
 
 	win_x = 512;
 	win_y = 512;
